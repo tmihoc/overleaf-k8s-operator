@@ -1,0 +1,100 @@
+# This file configures Charmcraft.
+# See https://juju.is/docs/sdk/charmcraft-config for guidance.
+
+# (Required)
+name: overleaf-k8s
+
+# (Required)
+type: charm
+
+# (Recommended)
+title: Charmed Overleaf
+
+# (Required)
+summary: A charm for Overleaf, the online LaTeX editor.
+
+description: |
+  A single sentence that says what the charm is, concisely and memorably.
+
+  A paragraph of one to three short sentences, that describe what the charm does.
+
+  A third paragraph that explains what need the charm meets.
+
+  Finally, a paragraph that describes whom the charm is useful for.
+
+
+# (Required for 'charm' type)
+# The run time base, the base format is <os-name>@<os-release>,
+# accepted bases are:
+# - ubuntu@24.04
+base: ubuntu@24.04
+# The build time base, if not defined the base is also the build time 
+# base, in addition to valid bases, the build-base can be "devel"
+# which would use the latest in development Ubuntu Series.
+build-base: ubuntu@24.04
+
+platforms:
+     # The supported platforms, may omit build-for if platform-name
+     # is a valid arch, valid architectures follow the Debian architecture names,
+     # accepted architectures are:
+     # - amd64
+     # - arm64
+     # - armhf
+     # - ppc64el
+     # - riscv64
+     # - s390x
+     amd64:
+         # The build time architecture
+         build-on: amd64
+         # The run time architecture
+         build-for: amd64
+
+parts:
+    charm:
+        plugin: charm
+        source: .
+
+# (Optional) Configuration options for the charm
+# This config section defines charm config options, and populates the Configure
+# tab on Charmhub.
+# More information on this section at https://juju.is/docs/sdk/charmcraft-yaml#heading--config
+# General configuration documentation: https://juju.is/docs/sdk/config
+# config:
+#   options:
+#     # An example config option to customise the log level of the workload
+#     log-level:
+#       description: |
+#         Configures the log level of gunicorn.
+
+#         Acceptable values are: "info", "debug", "warning", "error" and "critical"
+#       default: "info"
+#       type: string
+
+
+# The containers and resources metadata apply to Kubernetes charms only.
+# See https://juju.is/docs/sdk/metadata-reference for a checklist and guidance.
+
+# Your workload’s containers.
+containers:
+  community:
+    resource: sharelatex
+
+
+
+# This field populates the Resources tab on Charmhub.
+resources:
+  # An OCI image resource for each container listed above.
+  # You may remove this if your charm will run without a workload sidecar container.
+  sharelatex:
+    type: oci-image
+    description: OCI image for the 'sharelatex' container
+    # The upstream-source field is ignored by Juju. It is included here as a reference
+    # so the integration testing suite knows which image to deploy during testing. This field
+    # is also used by the 'canonical/charming-actions' Github action for automated releasing.
+    upstream-source: some-repo/some-image:some-tag
+
+requires:
+  database:
+    interface: mongodb_client
+    optional: false
+
