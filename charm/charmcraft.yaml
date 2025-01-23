@@ -93,8 +93,16 @@ resources:
     # is also used by the 'canonical/charming-actions' Github action for automated releasing.
     upstream-source: some-repo/some-image:some-tag
 
+charm-libs:
+  - lib: data_platform_libs.data_interfaces
+    version: "0"
+  - lib: redis_k8s.redis
+    version: "0"
+
 requires:
   database:
     interface: mongodb_client
     optional: false
-
+  redis:
+    interface: redis
+    optional: false    

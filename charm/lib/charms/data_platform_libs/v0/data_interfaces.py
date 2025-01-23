@@ -59,7 +59,7 @@ class ApplicationCharm(CharmBase):
         # Start application with rendered configuration
         self._start_application(config_file)
 
-        # Set active status+
+        # Set active status
         self.unit.status = ActiveStatus("received database credentials")
 ```
 

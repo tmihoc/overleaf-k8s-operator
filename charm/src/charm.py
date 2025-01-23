@@ -13,12 +13,13 @@ from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseRequires,
 )
 
+from charms.redis_k8s.v0.redis import RedisRequires
+
 logger = logging.getLogger(__name__)
 
 
 class OverleafK8S2Charm(ops.CharmBase):
-    """Charm the application."""
-
+    """Charm the application."""    
     def __init__(self, framework: ops.Framework):
         super().__init__(framework)
         framework.observe(self.on["community"].pebble_ready, self._configure_change)
@@ -26,12 +27,17 @@ class OverleafK8S2Charm(ops.CharmBase):
         # Charm events defined in the database requires charm library.
         self.database = DatabaseRequires(self, relation_name="database", database_name="overleaf")
         self.framework.observe(self.database.on.database_created, self._configure_change)
+        self.redis = RedisRequires(self, "redis")
+        self.framework.observe(self.redis.on.redis_relation_updated, self._configure_change)
 
     def _configure_change(self, event: ops.HookEvent):
         """Handle pebble-ready event."""
         # TODO If we don't have the database, we can't continue:
         if not self.model.get_relation('database'):
-            logger.info("No relation to the database yet.")
+            logger.info("No relation to the MongoDB database yet.")
+            return # here's where the holistic approach makes thing easy -- you don't need to defer
+        if not self.model.get_relation('redis'):
+            logger.info("No relation to the Redis database yet.")
             return # here's where the holistic approach makes thing easy -- you don't need to defer
         container = self.unit.containers["community"]           
         if not container.can_connect():
@@ -205,6 +211,8 @@ http {
 	"NOTIFICATIONS_HOST":"127.0.0.1",
 	"PROJECT_HISTORY_HOST":"127.0.0.1",
 	"REALTIME_HOST":"127.0.0.1",
+    "REDIS_ENABLED": "false",
+    "REDIS_HOST": self.redis.relation_data.get("hostname"),
 	"SPELLING_HOST":"127.0.0.1",
 	"WEB_HOST":"127.0.0.1",
 	"WEB_API_HOST":"127.0.0.1",               
@@ -219,7 +227,7 @@ http {
 # "OVERLEAF_PORT":"80",
 # "SIBLING_CONTAINERS_ENABLED":"true",
 # "DOCKER_SOCKET_PATH":"/var/run/docker.sock",
-# "MONGO_ENABLED":"true",
+# "MONGO_ENABLED":"true", #actually means overleaf should have its own mongodb
 # "MONGO_DATA_PATH":"data/mongo",
 # "MONGO_IMAGE":"mongo",
 # "MONGO_VERSION":"6.0",
