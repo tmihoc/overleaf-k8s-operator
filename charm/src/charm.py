@@ -14,7 +14,7 @@ from charms.redis_k8s.v0.redis import RedisRequires, RedisRelationCharmEvents
 logger = logging.getLogger(__name__)
 
 
-class OverleafK8S2Charm(ops.CharmBase):
+class OverleafK8sCharm(ops.CharmBase):
     """Charm the application."""
 
     on = RedisRelationCharmEvents()
@@ -399,4 +399,4 @@ http {
 
 
 if __name__ == "__main__":  # pragma: nocover
-    ops.main(OverleafK8S2Charm)  # type: ignore
+    ops.main(OverleafK8sCharm)  # type: ignore
