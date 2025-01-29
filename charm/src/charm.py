@@ -31,7 +31,6 @@ class OverleafK8sCharm(ops.CharmBase):
 
     def _configure_change(self, event: ops.HookEvent):
         """Handle pebble-ready event."""
-        # TODO If we don't have the database, we can't continue:
         if not self.model.get_relation("database"):
             logger.info("No relation to the MongoDB database yet.")
             return  # here's where the holistic approach makes thing easy -- you don't need to defer
