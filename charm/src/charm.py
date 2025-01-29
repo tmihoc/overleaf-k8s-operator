@@ -202,11 +202,17 @@ http {
             "DOCUPDATER_HOST": "127.0.0.1",
             "FILESTORE_HOST": "127.0.0.1",
             "HISTORY_V1_HOST": "127.0.0.1",
+            # For Overleaf, MONGO_ENABLED=true doesn't mean "use MongoDB", it
+            # means that the Overleaf image should use the included MongoDB.
+            # For the charm, we want to use MongoDB provided by an integration
+            # instead.
             "MONGO_ENABLED": "false",
             "MONGO_URL": f"mongodb://{database_settings['MONGO_USER']}:{database_settings['MONGO_PASSWORD']}@{database_settings['MONGO_HOST']}:{database_settings['MONGO_PORT']}/{database_settings['MONGO_DB']}",
             "NOTIFICATIONS_HOST": "127.0.0.1",
             "PROJECT_HISTORY_HOST": "127.0.0.1",
             "REALTIME_HOST": "127.0.0.1",
+            # Similar to MONGO_ENABLED, this means "a Redis will be provided",
+            # not "don't use Redis".
             "REDIS_ENABLED": "false",
             "REDIS_HOST": self.redis.relation_data.get("hostname"),
             "SPELLING_HOST": "127.0.0.1",
