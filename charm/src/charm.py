@@ -7,9 +7,8 @@
 import logging
 
 import ops
-
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
-from charms.redis_k8s.v0.redis import RedisRequires, RedisRelationCharmEvents
+from charms.redis_k8s.v0.redis import RedisRelationCharmEvents, RedisRequires
 
 logger = logging.getLogger(__name__)
 
