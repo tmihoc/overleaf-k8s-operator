@@ -399,4 +399,4 @@ http {
 
 
 if __name__ == "__main__":  # pragma: nocover
-    ops.main(OverleafK8sCharm)  # type: ignore
+    ops.main(OverleafK8sCharm)
