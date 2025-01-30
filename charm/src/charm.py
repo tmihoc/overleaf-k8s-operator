@@ -49,7 +49,7 @@ class OverleafK8sCharm(ops.CharmBase):
 ## ! See /etc/nginx/templates/               ! ##
 ## ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ##
 daemon off;
-user www-data;
+#user www-data;
 worker_processes 3; # we replaced ${NGINX_WORKER_PROCESSES} with 3
 pid /run/nginx.pid;
 
