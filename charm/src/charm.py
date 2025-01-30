@@ -149,24 +149,33 @@ http {
         }
 
         if self.model.get_relation("database") is None:
+            logger.info("MongoDB integration not set up yet.")
             return default
 
         relation_id = self.database.relations[0].id
         relation_data = self.database.fetch_relation_data()[relation_id]
+        # TODO: remove the next logging line.
+        logger.info("Raw relation data (id %s): %r", relation_id, relation_data)
 
         endpoints = relation_data.get("endpoints", "").split(",")
         if len(endpoints) < 1:
+            logger.info("No MongoDB endpoint provided yet.")
             return default
 
         primary_endpoint = endpoints[0].split(":")
         if len(primary_endpoint) < 2:
-            return default
+            logger.info("Assuming primary endpoint is a plain hostname: %r", primary_endpoint)
+            host = primary_endpoint[0]
+            port = 27107
+        else:
+            host = primary_endpoint[0]
+            port = primary_endpoint[1]
 
         data = {
             "MONGO_USER": relation_data.get("username"),
             "MONGO_PASSWORD": relation_data.get("password"),
-            "MONGO_HOST": primary_endpoint[0],
-            "MONGO_PORT": primary_endpoint[1],
+            "MONGO_HOST": host,
+            "MONGO_PORT": port,
             "MONGO_DB": relation_data.get("database"),
         }
 
@@ -400,7 +409,7 @@ http {
                 "web_api": {
                     "override": "replace",
                     "summary": "web api",
-                    "command": "/usr/bin/node /overleaf/services/web/app.js >> /var/log/overleaf/web-api.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/web/app.mjs >> /var/log/overleaf/web-api.log 2>&1",
                     "startup": "enabled",
                     "environment": web_api_env,
                     "user": "www-data",
@@ -408,7 +417,7 @@ http {
                 "web": {
                     "override": "replace",
                     "summary": "web",
-                    "command": "/usr/bin/node /overleaf/services/web/app.js >> /var/log/overleaf/web.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/web/app.mjs >> /var/log/overleaf/web.log 2>&1",
                     "startup": "enabled",
                     "environment": web_env,
                     "user": "www-data",
