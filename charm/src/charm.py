@@ -7,14 +7,13 @@
 import logging
 
 import ops
-
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
-from charms.redis_k8s.v0.redis import RedisRequires, RedisRelationCharmEvents
+from charms.redis_k8s.v0.redis import RedisRelationCharmEvents, RedisRequires
 
 logger = logging.getLogger(__name__)
 
 
-class OverleafK8S2Charm(ops.CharmBase):
+class OverleafK8sCharm(ops.CharmBase):
     """Charm the application."""
 
     on = RedisRelationCharmEvents()
@@ -31,7 +30,6 @@ class OverleafK8S2Charm(ops.CharmBase):
 
     def _configure_change(self, event: ops.HookEvent):
         """Handle pebble-ready event."""
-        # TODO If we don't have the database, we can't continue:
         if not self.model.get_relation("database"):
             logger.info("No relation to the MongoDB database yet.")
             return  # here's where the holistic approach makes thing easy -- you don't need to defer
@@ -51,7 +49,7 @@ class OverleafK8S2Charm(ops.CharmBase):
 ## ! See /etc/nginx/templates/               ! ##
 ## ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ##
 daemon off;
-user www-data;
+#user www-data;
 worker_processes 3; # we replaced ${NGINX_WORKER_PROCESSES} with 3
 pid /run/nginx.pid;
 
@@ -151,24 +149,33 @@ http {
         }
 
         if self.model.get_relation("database") is None:
+            logger.info("MongoDB integration not set up yet.")
             return default
 
         relation_id = self.database.relations[0].id
         relation_data = self.database.fetch_relation_data()[relation_id]
+        # TODO: remove the next logging line.
+        logger.info("Raw relation data (id %s): %r", relation_id, relation_data)
 
         endpoints = relation_data.get("endpoints", "").split(",")
         if len(endpoints) < 1:
+            logger.info("No MongoDB endpoint provided yet.")
             return default
 
         primary_endpoint = endpoints[0].split(":")
         if len(primary_endpoint) < 2:
-            return default
+            logger.info("Assuming primary endpoint is a plain hostname: %r", primary_endpoint)
+            host = primary_endpoint[0]
+            port = 27107
+        else:
+            host = primary_endpoint[0]
+            port = primary_endpoint[1]
 
         data = {
             "MONGO_USER": relation_data.get("username"),
             "MONGO_PASSWORD": relation_data.get("password"),
-            "MONGO_HOST": primary_endpoint[0],
-            "MONGO_PORT": primary_endpoint[1],
+            "MONGO_HOST": host,
+            "MONGO_PORT": port,
             "MONGO_DB": relation_data.get("database"),
         }
 
@@ -195,6 +202,9 @@ http {
         # exec /sbin/setuser www-data /usr/bin/node $NODE_PARAMS /overleaf/services/chat/app.js >> /var/log/overleaf/chat.log 2>&1
         # This one has the user, 'www-data', and the actual command. We copy it without $NODE_PARAMS as that's not necessary for now.
         database_settings = self.get_relation_data()
+        mongo_uri = f"mongodb://{database_settings['MONGO_USER']}:{database_settings['MONGO_PASSWORD']}@{database_settings['MONGO_HOST']}:{database_settings['MONGO_PORT']}/{database_settings['MONGO_DB']}"
+        # TODO: remove this logging, since it contains a password.
+        logger.info("Setting Mongo URI to %r from %r", mongo_uri, database_settings)
         common_env = {
             "CHAT_HOST": "127.0.0.1",
             "CLSI_HOST": "127.0.0.1",
@@ -202,39 +212,42 @@ http {
             "DOCSTORE_HOST": "127.0.0.1",
             "DOCUMENT_UPDATER_HOST": "127.0.0.1",
             "DOCUPDATER_HOST": "127.0.0.1",
+            # TODO: this should probably not be disabled, but likely we need
+            # to set up a relation to an SMTP server first.
+            "EMAIL_CONFIRMATION_DISABLED": "true",
             "FILESTORE_HOST": "127.0.0.1",
             "HISTORY_V1_HOST": "127.0.0.1",
+            # For Overleaf, MONGO_ENABLED=true doesn't mean "use MongoDB"; it
+            # means that the Overleaf image should use the included MongoDB.
+            # For the charm, we want to use MongoDB provided by an integration
+            # instead.
             "MONGO_ENABLED": "false",
-            "MONGO_URL": f"mongodb://{database_settings['MONGO_USER']}:{database_settings['MONGO_PASSWORD']}@{database_settings['MONGO_HOST']}:{database_settings['MONGO_PORT']}/{database_settings['MONGO_DB']}",
+            # TODO: can we skip nginx entirely if we provide ingress via a
+            # relation? This doc seems to indicate that it's only needed for
+            # TLS termination, which in charming would be better elsewhere.
+            # https://github.com/overleaf/toolkit/blob/d7e63cef6d36f47b51889280cc5698249db0ede2/doc/tls-proxy.md
+            # For now, we have to chown /var/lib/nginx to www-data to get nginx
+            # to start, and then it fails to bind to :80 because it's not root
+            # so we probably need to change the environment variable to set the
+            # port.
+            "NGINX_ENABLED": "false",
             "NOTIFICATIONS_HOST": "127.0.0.1",
+            "OVERLEAF_MONGO_URL": mongo_uri,
             "PROJECT_HISTORY_HOST": "127.0.0.1",
             "REALTIME_HOST": "127.0.0.1",
+            # Similar to MONGO_ENABLED, this means "a Redis will be provided",
+            # not "don't use Redis".
             "REDIS_ENABLED": "false",
             "REDIS_HOST": self.redis.relation_data.get("hostname"),
+            "SERVER_PRO": "false",
             "SPELLING_HOST": "127.0.0.1",
             "WEB_HOST": "127.0.0.1",
             "WEB_API_HOST": "127.0.0.1",
         }
-        #         command = "/sbin/my_init"
-        # #TODO figure out the right command (pebble plan seems to be working but the workload service isn't running)
-        #         env = {
-        #              "OVERLEAF_IMAGE_NAME":"sharelatex/sharelatex",
         # "OVERLEAF_DATA_PATH":"data/overleaf",
-        # "SERVER_PRO":"false",
         # "OVERLEAF_LISTEN_IP":"127.0.0.1",
         # "OVERLEAF_PORT":"80",
-        # "SIBLING_CONTAINERS_ENABLED":"true",
-        # "DOCKER_SOCKET_PATH":"/var/run/docker.sock",
-        # "MONGO_ENABLED":"true", #actually means overleaf should have its own mongodb
-        # "MONGO_DATA_PATH":"data/mongo",
-        # "MONGO_IMAGE":"mongo",
-        # "MONGO_VERSION":"6.0",
-        # "REDIS_ENABLED":"true",
-        # "REDIS_DATA_PATH":"data/redis",
-        # "REDIS_IMAGE":"redis:6.2",
         # "REDIS_AOF_PERSISTENCE":"true",
-        # "GIT_BRIDGE_ENABLED":"false",
-        # "GIT_BRIDGE_DATA_PATH":"data/git-bridge",
         # "NGINX_ENABLED":"false",
         # "NGINX_CONFIG_PATH":"config/nginx/nginx.conf",
         # "NGINX_HTTP_PORT":"80",
@@ -246,8 +259,15 @@ http {
         # "OVERLEAF_APP_NAME":"Our Overleaf Instance",
         # "ENABLED_LINKED_FILE_TYPES":"project_file,project_output_file",
         # "ENABLE_CONVERSIONS":"true",
-        # "EMAIL_CONFIRMATION_DISABLED":"true",
-        #         }
+
+        # TODO: provide a proper secret.
+        session_secret = "foo"
+
+        # TODO: this should perhaps be config?
+        web_api_user = "overleaf"
+        # TODO: this should be a generated secret
+        web_api_password = "overleaf"
+
         chat_env = common_env.copy()
         chat_env.update({"LISTEN_ADDRESS": "127.0.0.1"})
         clsi_env = common_env.copy()
@@ -262,19 +282,23 @@ http {
         document_updater_env.update({"LISTEN_ADDRESS": "127.0.0.1"})
         filestore_env = common_env.copy()
         filestore_env.update({"LISTEN_ADDRESS": "127.0.0.1"})
+        # TODO: history_v1 doesn't really need all of what's in common, but does
+        # need the Mongo settings.
+        history_v1_env = common_env.copy()
+        history_v1_env.update({"NODE_CONFIG_DIR": "/overleaf/services/history-v1/config"})
         notifications_env = common_env.copy()
         notifications_env.update({"LISTEN_ADDRESS": "127.0.0.1"})
         project_history_env = common_env.copy()
         project_history_env.update({"LISTEN_ADDRESS": "127.0.0.1"})
         real_time_env = common_env.copy()
-        real_time_env.update({"LISTEN_ADDRESS": "127.0.0.1"})
+        real_time_env.update({"LISTEN_ADDRESS": "127.0.0.1", "OVERLEAF_SESSION_SECRET": session_secret})
         web_api_env = common_env.copy()
         web_api_env.update(
-            {"LISTEN_ADDRESS": "0.0.0.0", "ENABLED_SERVICES": "api", "METRICS_APP_NAME": "web-api"}
+            {"LISTEN_ADDRESS": "0.0.0.0", "ENABLED_SERVICES": "api", "METRICS_APP_NAME": "web-api", "OVERLEAF_SESSION_SECRET": session_secret, "WEB_API_USER": web_api_user, "WEB_API_PASSWORD": web_api_password}
         )
         web_env = common_env.copy()
         web_env.update(
-            {"LISTEN_ADDRESS": "127.0.0.1", "ENABLED_SERVICES": "web", "WEB_PORT": "4000"}
+            {"LISTEN_ADDRESS": "127.0.0.1", "ENABLED_SERVICES": "web", "WEB_PORT": "4000", "OVERLEAF_SESSION_SECRET": session_secret, "WEB_API_USER": web_api_user, "WEB_API_PASSWORD": web_api_password}
         )
         pebble_layer = {
             # TODO: 3 services not running: history_v1, nginx, real-time
@@ -334,7 +358,7 @@ http {
                     "summary": "history v1",
                     "command": "/usr/bin/node /overleaf/services/history-v1/app.js >> /var/log/overleaf/history-v1.log 2>&1",
                     "startup": "enabled",
-                    "environment": {"NODE_CONFIG_DIR": "/overleaf/services/history-v1/config"},
+                    "environment": history_v1_env,
                     "user": "www-data",
                 },
                 "nginx": {
@@ -380,7 +404,7 @@ http {
                 "web_api": {
                     "override": "replace",
                     "summary": "web api",
-                    "command": "/usr/bin/node /overleaf/services/web/app.js >> /var/log/overleaf/web-api.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/web/app.mjs >> /var/log/overleaf/web-api.log 2>&1",
                     "startup": "enabled",
                     "environment": web_api_env,
                     "user": "www-data",
@@ -388,7 +412,7 @@ http {
                 "web": {
                     "override": "replace",
                     "summary": "web",
-                    "command": "/usr/bin/node /overleaf/services/web/app.js >> /var/log/overleaf/web.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/web/app.mjs >> /var/log/overleaf/web.log 2>&1",
                     "startup": "enabled",
                     "environment": web_env,
                     "user": "www-data",
@@ -399,4 +423,4 @@ http {
 
 
 if __name__ == "__main__":  # pragma: nocover
-    ops.main(OverleafK8S2Charm)  # type: ignore
+    ops.main(OverleafK8sCharm)
