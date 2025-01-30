@@ -212,6 +212,9 @@ http {
             "DOCSTORE_HOST": "127.0.0.1",
             "DOCUMENT_UPDATER_HOST": "127.0.0.1",
             "DOCUPDATER_HOST": "127.0.0.1",
+            # TODO: this should probably not be disabled, but likely we need
+            # to set up a relation to an SMTP server first.
+            "EMAIL_CONFIRMATION_DISABLED": "true",
             "FILESTORE_HOST": "127.0.0.1",
             "HISTORY_V1_HOST": "127.0.0.1",
             # For Overleaf, MONGO_ENABLED=true doesn't mean "use MongoDB"; it
@@ -219,6 +222,15 @@ http {
             # For the charm, we want to use MongoDB provided by an integration
             # instead.
             "MONGO_ENABLED": "false",
+            # TODO: can we skip nginx entirely if we provide ingress via a
+            # relation? This doc seems to indicate that it's only needed for
+            # TLS termination, which in charming would be better elsewhere.
+            # https://github.com/overleaf/toolkit/blob/d7e63cef6d36f47b51889280cc5698249db0ede2/doc/tls-proxy.md
+            # For now, we have to chown /var/lib/nginx to www-data to get nginx
+            # to start, and then it fails to bind to :80 because it's not root
+            # so we probably need to change the environment variable to set the
+            # port.
+            "NGINX_ENABLED": "false",
             "NOTIFICATIONS_HOST": "127.0.0.1",
             "OVERLEAF_MONGO_URL": mongo_uri,
             "PROJECT_HISTORY_HOST": "127.0.0.1",
@@ -227,27 +239,15 @@ http {
             # not "don't use Redis".
             "REDIS_ENABLED": "false",
             "REDIS_HOST": self.redis.relation_data.get("hostname"),
+            "SERVER_PRO": "false",
             "SPELLING_HOST": "127.0.0.1",
             "WEB_HOST": "127.0.0.1",
             "WEB_API_HOST": "127.0.0.1",
         }
-        #         command = "/sbin/my_init"
-        # #TODO figure out the right command (pebble plan seems to be working but the workload service isn't running)
-        #         env = {
-        #              "OVERLEAF_IMAGE_NAME":"sharelatex/sharelatex",
         # "OVERLEAF_DATA_PATH":"data/overleaf",
-        # "SERVER_PRO":"false",
         # "OVERLEAF_LISTEN_IP":"127.0.0.1",
         # "OVERLEAF_PORT":"80",
         # "SIBLING_CONTAINERS_ENABLED":"true",
-        # "DOCKER_SOCKET_PATH":"/var/run/docker.sock",
-        # "MONGO_ENABLED":"true", #actually means overleaf should have its own mongodb
-        # "MONGO_DATA_PATH":"data/mongo",
-        # "MONGO_IMAGE":"mongo",
-        # "MONGO_VERSION":"6.0",
-        # "REDIS_ENABLED":"true",
-        # "REDIS_DATA_PATH":"data/redis",
-        # "REDIS_IMAGE":"redis:6.2",
         # "REDIS_AOF_PERSISTENCE":"true",
         # "GIT_BRIDGE_ENABLED":"false",
         # "GIT_BRIDGE_DATA_PATH":"data/git-bridge",
@@ -262,8 +262,6 @@ http {
         # "OVERLEAF_APP_NAME":"Our Overleaf Instance",
         # "ENABLED_LINKED_FILE_TYPES":"project_file,project_output_file",
         # "ENABLE_CONVERSIONS":"true",
-        # "EMAIL_CONFIRMATION_DISABLED":"true",
-        #         }
 
         # TODO: provide a proper secret.
         session_secret = "foo"
