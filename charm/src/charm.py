@@ -268,6 +268,10 @@ http {
         document_updater_env.update({"LISTEN_ADDRESS": "127.0.0.1"})
         filestore_env = common_env.copy()
         filestore_env.update({"LISTEN_ADDRESS": "127.0.0.1"})
+        # TODO: history_v1 doesn't really need all of what's in common, but does
+        # need the Mongo settings.
+        history_v1_env = common_env.copy()
+        history_v1_env.update({"NODE_CONFIG_DIR": "/overleaf/services/history-v1/config"})
         notifications_env = common_env.copy()
         notifications_env.update({"LISTEN_ADDRESS": "127.0.0.1"})
         project_history_env = common_env.copy()
@@ -340,7 +344,7 @@ http {
                     "summary": "history v1",
                     "command": "/usr/bin/node /overleaf/services/history-v1/app.js >> /var/log/overleaf/history-v1.log 2>&1",
                     "startup": "enabled",
-                    "environment": {"NODE_CONFIG_DIR": "/overleaf/services/history-v1/config"},
+                    "environment": history_v1_env,
                     "user": "www-data",
                 },
                 "nginx": {
