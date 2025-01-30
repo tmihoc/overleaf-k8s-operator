@@ -299,11 +299,11 @@ http {
         real_time_env.update({"LISTEN_ADDRESS": "127.0.0.1", "OVERLEAF_SESSION_SECRET": session_secret})
         web_api_env = common_env.copy()
         web_api_env.update(
-            {"LISTEN_ADDRESS": "0.0.0.0", "ENABLED_SERVICES": "api", "METRICS_APP_NAME": "web-api", "OVERLEAF_SESSION_SECRET": session_secret, "WEB_API_USER": web_api_user}
+            {"LISTEN_ADDRESS": "0.0.0.0", "ENABLED_SERVICES": "api", "METRICS_APP_NAME": "web-api", "OVERLEAF_SESSION_SECRET": session_secret, "WEB_API_USER": web_api_user, "WEB_API_PASSWORD": web_api_password}
         )
         web_env = common_env.copy()
         web_env.update(
-            {"LISTEN_ADDRESS": "127.0.0.1", "ENABLED_SERVICES": "web", "WEB_PORT": "4000", "OVERLEAF_SESSION_SECRET": session_secret, "WEB_API_USER": web_api_user}
+            {"LISTEN_ADDRESS": "127.0.0.1", "ENABLED_SERVICES": "web", "WEB_PORT": "4000", "OVERLEAF_SESSION_SECRET": session_secret, "WEB_API_USER": web_api_user, "WEB_API_PASSWORD": web_api_password}
         )
         pebble_layer = {
             # TODO: 3 services not running: history_v1, nginx, real-time
