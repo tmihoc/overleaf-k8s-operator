@@ -374,3 +374,44 @@ Figure out why Multipass mount is read only or give up trying to look at the log
 BTW We can't touch or mv files within the VM (only locally, to be synced to the mounted dir in the VM).
 
 ### Figure out why some things are not running
+
+
+## Jobs to do
+
+### Set unit/application status
+
+We should observe unit/app collect status and set the status appropriately (for example, blocked when Mongo and Redis aren't available yet).
+
+### Upgrade
+
+TeX Live can be upgraded, and probably should either be as part of building the image or could be in the charm upgrade event.
+
+See https://github.com/overleaf/toolkit/blob/d7e63cef6d36f47b51889280cc5698249db0ede2/doc/ce-upgrading-texlive.md
+
+### Set the charm version
+
+Pull this from git now that we're using it. Should be able to do a post-commit hook I think?
+
+### Set the unit workload version
+
+Presumably can pull from overleaf somehow.
+
+### Storage
+
+OVERLEAF_DATA_PATH is for a data volume of some type, probably this needs to be persistent and should be handled with Juju Storage.
+
+### Logs
+
+The service logs are at least partially going to Pebble - but we also try to redirect them to files. Should clean that up.
+
+### Observability
+
+Normal COS integration.
+
+### Doctor?
+
+The toolkit has a nice "doctor" tool that helps with debugging. Maybe the charm could offer a doctor action?
+
+https://github.com/overleaf/toolkit/blob/d7e63cef6d36f47b51889280cc5698249db0ede2/doc/the-doctor.md
+
+
