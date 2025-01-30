@@ -193,6 +193,9 @@ http {
         # exec /sbin/setuser www-data /usr/bin/node $NODE_PARAMS /overleaf/services/chat/app.js >> /var/log/overleaf/chat.log 2>&1
         # This one has the user, 'www-data', and the actual command. We copy it without $NODE_PARAMS as that's not necessary for now.
         database_settings = self.get_relation_data()
+        mongo_uri = f"mongodb://{database_settings['MONGO_USER']}:{database_settings['MONGO_PASSWORD']}@{database_settings['MONGO_HOST']}:{database_settings['MONGO_PORT']}/{database_settings['MONGO_DB']}"
+        # TODO: remove this logging, since it contains a password.
+        logger.info("Setting Mongo URI to %r from %r", mongo_uri, database_settings)
         common_env = {
             "CHAT_HOST": "127.0.0.1",
             "CLSI_HOST": "127.0.0.1",
@@ -207,8 +210,8 @@ http {
             # For the charm, we want to use MongoDB provided by an integration
             # instead.
             "MONGO_ENABLED": "false",
-            "MONGO_URL": f"mongodb://{database_settings['MONGO_USER']}:{database_settings['MONGO_PASSWORD']}@{database_settings['MONGO_HOST']}:{database_settings['MONGO_PORT']}/{database_settings['MONGO_DB']}",
             "NOTIFICATIONS_HOST": "127.0.0.1",
+            "OVERLEAF_MONGO_URL": mongo_uri,
             "PROJECT_HISTORY_HOST": "127.0.0.1",
             "REALTIME_HOST": "127.0.0.1",
             # Similar to MONGO_ENABLED, this means "a Redis will be provided",
@@ -252,8 +255,15 @@ http {
         # "ENABLE_CONVERSIONS":"true",
         # "EMAIL_CONFIRMATION_DISABLED":"true",
         #         }
+
         # TODO: provide a proper secret.
         session_secret = "foo"
+
+        # TODO: this should perhaps be config?
+        web_api_user = "overleaf"
+        # TODO: this should be a generated secret
+        web_api_password = "overleaf"
+
         chat_env = common_env.copy()
         chat_env.update({"LISTEN_ADDRESS": "127.0.0.1"})
         clsi_env = common_env.copy()
@@ -277,14 +287,14 @@ http {
         project_history_env = common_env.copy()
         project_history_env.update({"LISTEN_ADDRESS": "127.0.0.1"})
         real_time_env = common_env.copy()
-        real_time_env.update({"LISTEN_ADDRESS": "127.0.0.1", "SESSION_SECRET": session_secret})
+        real_time_env.update({"LISTEN_ADDRESS": "127.0.0.1", "OVERLEAF_SESSION_SECRET": session_secret})
         web_api_env = common_env.copy()
         web_api_env.update(
-            {"LISTEN_ADDRESS": "0.0.0.0", "ENABLED_SERVICES": "api", "METRICS_APP_NAME": "web-api", "SESSION_SECRET": session_secret}
+            {"LISTEN_ADDRESS": "0.0.0.0", "ENABLED_SERVICES": "api", "METRICS_APP_NAME": "web-api", "OVERLEAF_SESSION_SECRET": session_secret, "WEB_API_USER": web_api_user}
         )
         web_env = common_env.copy()
         web_env.update(
-            {"LISTEN_ADDRESS": "127.0.0.1", "ENABLED_SERVICES": "web", "WEB_PORT": "4000", "SESSION_SECRET": session_secret}
+            {"LISTEN_ADDRESS": "127.0.0.1", "ENABLED_SERVICES": "web", "WEB_PORT": "4000", "OVERLEAF_SESSION_SECRET": session_secret, "WEB_API_USER": web_api_user}
         )
         pebble_layer = {
             # TODO: 3 services not running: history_v1, nginx, real-time
