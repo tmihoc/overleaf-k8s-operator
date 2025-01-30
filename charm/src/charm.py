@@ -247,7 +247,6 @@ http {
         # "OVERLEAF_DATA_PATH":"data/overleaf",
         # "OVERLEAF_LISTEN_IP":"127.0.0.1",
         # "OVERLEAF_PORT":"80",
-        # "SIBLING_CONTAINERS_ENABLED":"true",
         # "REDIS_AOF_PERSISTENCE":"true",
         # "GIT_BRIDGE_ENABLED":"false",
         # "GIT_BRIDGE_DATA_PATH":"data/git-bridge",
