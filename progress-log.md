@@ -19,6 +19,10 @@ juju ssh --container community overleaf-k8s/0 bash
 
 To clean up removals: juju resolved --no-retry unit/0
 
+To filter debug-lof: juju debug-log --include unit/0
+
+To format (to make VSCode happy): ruff format src/charm.py
+
 ## The log
 
 
@@ -372,6 +376,40 @@ multipass transfer my-charm-vm:/tmp/my-pebble-logs.txt .
 Figure out why Multipass mount is read only or give up trying to look at the logs this way. (Or why we still need to charmcraft pack locally.)
 
 BTW We can't touch or mv files within the VM (only locally, to be synced to the mounted dir in the VM).
+
+
+### Set up Redis
+
+Found the library: https://charmhub.io/redis-k8s/libraries/redis 
+
+In charmcraft.yaml, declared charm-libs; defined the requires endpoint; then used charmcraft fetch-libs (had to run this locally, not in the VM).
+
+In src/charm.py, imported the library; created the redis db object (docs missing); set up an observer for the custom event from the library (docs were missing or incomplete); paired it with the config handler, using the holistic approach; added a few lines to that handler to ensure that the redis integration is added before proceeding. We also added the REDIS_ENABLED and REDIS_HOST envvars (the latter: the value was from the redis library).
+
+
+In the library docs, the on = RedisRelationCharmEvents() that overwrites the Ops on is in fact necessary, because the library was developed in a slightly unusual way.
+
+Redis appeared in an error state. Tried to remove it and even resolve errors, but, strangely, we're told "ERROR unit "redis-k8s/0" is not in an error state", even though juju status still shows it in error.
+
+ubuntu@my-charm-vm:~/overleaf-k8s-4/charm$ juju status
+Model          Controller    Cloud/Region        Version  SLA          Timestamp
+welcome-k8s-5  microk8s-new  microk8s/localhost  3.5.3    unsupported  08:51:41+01:00
+
+App           Version               Status       Scale  Charm         Channel        Rev  Address         Exposed  Message
+mongodb-k8s                         active           1  mongodb-k8s   6/stable        61  10.152.183.167  no       
+overleaf-k8s                        maintenance      1  overleaf-k8s                  14  10.152.183.69   no       
+redis-k8s     ubuntu/redis@691f315  waiting        0/1  redis-k8s     latest/stable    7  10.238.98.84    no       
+
+Unit             Workload     Agent   Address      Ports     Message
+mongodb-k8s/0*   active       idle    10.1.98.86             Primary
+overleaf-k8s/0*  maintenance  idle    10.1.98.110            
+redis-k8s/0*     error        failed  10.1.98.97   6379/TCP  unknown container reason "Unknown": 
+ubuntu@my-charm-vm:~/overleaf-k8s-4/charm$ juju resolved --no-retry redis-k8s/0
+ERROR unit "redis-k8s/0" is not in an error state
+ubuntu@my-charm-vm:~/overleaf-k8s-4/charm$ 
+
+
+
 
 ### Figure out why some things are not running
 
