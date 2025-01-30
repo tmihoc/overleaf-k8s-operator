@@ -202,7 +202,7 @@ http {
             "DOCUPDATER_HOST": "127.0.0.1",
             "FILESTORE_HOST": "127.0.0.1",
             "HISTORY_V1_HOST": "127.0.0.1",
-            # For Overleaf, MONGO_ENABLED=true doesn't mean "use MongoDB", it
+            # For Overleaf, MONGO_ENABLED=true doesn't mean "use MongoDB"; it
             # means that the Overleaf image should use the included MongoDB.
             # For the charm, we want to use MongoDB provided by an integration
             # instead.
@@ -252,6 +252,8 @@ http {
         # "ENABLE_CONVERSIONS":"true",
         # "EMAIL_CONFIRMATION_DISABLED":"true",
         #         }
+        # TODO: provide a proper secret.
+        session_secret = "foo"
         chat_env = common_env.copy()
         chat_env.update({"LISTEN_ADDRESS": "127.0.0.1"})
         clsi_env = common_env.copy()
@@ -271,14 +273,14 @@ http {
         project_history_env = common_env.copy()
         project_history_env.update({"LISTEN_ADDRESS": "127.0.0.1"})
         real_time_env = common_env.copy()
-        real_time_env.update({"LISTEN_ADDRESS": "127.0.0.1"})
+        real_time_env.update({"LISTEN_ADDRESS": "127.0.0.1", "SESSION_SECRET": session_secret})
         web_api_env = common_env.copy()
         web_api_env.update(
-            {"LISTEN_ADDRESS": "0.0.0.0", "ENABLED_SERVICES": "api", "METRICS_APP_NAME": "web-api"}
+            {"LISTEN_ADDRESS": "0.0.0.0", "ENABLED_SERVICES": "api", "METRICS_APP_NAME": "web-api", "SESSION_SECRET": session_secret}
         )
         web_env = common_env.copy()
         web_env.update(
-            {"LISTEN_ADDRESS": "127.0.0.1", "ENABLED_SERVICES": "web", "WEB_PORT": "4000"}
+            {"LISTEN_ADDRESS": "127.0.0.1", "ENABLED_SERVICES": "web", "WEB_PORT": "4000", "SESSION_SECRET": session_secret}
         )
         pebble_layer = {
             # TODO: 3 services not running: history_v1, nginx, real-time
