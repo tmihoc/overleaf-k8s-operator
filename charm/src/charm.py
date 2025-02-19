@@ -42,92 +42,6 @@ class OverleafK8sCharm(ops.CharmBase):
             return
         # Add initial Pebble config layer using the Pebble API
         container.add_layer("Overleaf service", self._pebble_layer, combine=True)
-        # Create nginx config:
-        config = """
-## ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ##
-## ! This file was generated from a template ! ##
-## ! See /etc/nginx/templates/               ! ##
-## ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ##
-daemon off;
-#user www-data;
-worker_processes 3; # we replaced ${NGINX_WORKER_PROCESSES} with 3
-pid /run/nginx.pid;
-
-events {
-	worker_connections 10; # we replaced ${NGINX_WORKER_CONNECTIONS} with 10
-	# multi_accept on;
-}
-
-http {
-
-	##
-	# Basic Settings
-	##
-
-	sendfile on;
-	tcp_nopush on;
-	tcp_nodelay on;
-	keepalive_timeout 120; # we replaced ${NGINX_KEEPALIVE_TIMEOUT} with 120
-	types_hash_max_size 2048;
-	# server_tokens off;
-
-	# server_names_hash_bucket_size 64;
-	# server_name_in_redirect off;
-
-	include /etc/nginx/mime.types;
-	default_type application/octet-stream;
-
-	##
-	# Logging Settings
-	##
-
-	access_log /var/log/nginx/access.log;
-	error_log /var/log/nginx/error.log;
-
-	##
-	# Gzip Settings
-	##
-
-	gzip on;
-	gzip_disable "msie6";
-	gzip_proxied any; # allow upstream server to compress.
-
-	client_max_body_size 50m;
-
-	# gzip_vary on;
-	# gzip_proxied any;
-	# gzip_comp_level 6;
-	# gzip_buffers 16 8k;
-	# gzip_http_version 1.1;
-	# gzip_types text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript;
-
-	##
-	# nginx-naxsi config
-	##
-	# Uncomment it if you installed nginx-naxsi
-	##
-
-	#include /etc/nginx/naxsi_core.rules;
-
-	##
-	# nginx-passenger config
-	##
-	# Uncomment it if you installed nginx-passenger
-	##
-
-	#passenger_root /usr;
-	#passenger_ruby /usr/bin/ruby;
-
-	##
-	# Virtual Host Configs
-	##
-
-	include /etc/nginx/conf.d/*.conf;
-	include /etc/nginx/sites-enabled/*;
-}
-
-        """
-        container.push("/etc/nginx/nginx.conf", config)
 
         # Make Pebble reevaluate its plan, ensuring any services are started if enabled.
         container.replan()
@@ -205,6 +119,10 @@ http {
         mongo_uri = f"mongodb://{database_settings['MONGO_USER']}:{database_settings['MONGO_PASSWORD']}@{database_settings['MONGO_HOST']}:{database_settings['MONGO_PORT']}/{database_settings['MONGO_DB']}"
         # TODO: remove this logging, since it contains a password.
         logger.info("Setting Mongo URI to %r from %r", mongo_uri, database_settings)
+        if self.redis.relation_data:
+            redis_hostname = self.redis.relation_data.get("hostname")
+        else:
+            redis_hostname = ''
         common_env = {
             "CHAT_HOST": "127.0.0.1",
             "CLSI_HOST": "127.0.0.1",
@@ -222,23 +140,14 @@ http {
             # For the charm, we want to use MongoDB provided by an integration
             # instead.
             "MONGO_ENABLED": "false",
-            # TODO: can we skip nginx entirely if we provide ingress via a
-            # relation? This doc seems to indicate that it's only needed for
-            # TLS termination, which in charming would be better elsewhere.
-            # https://github.com/overleaf/toolkit/blob/d7e63cef6d36f47b51889280cc5698249db0ede2/doc/tls-proxy.md
-            # For now, we have to chown /var/lib/nginx to www-data to get nginx
-            # to start, and then it fails to bind to :80 because it's not root
-            # so we probably need to change the environment variable to set the
-            # port.
-            "NGINX_ENABLED": "false",
             "NOTIFICATIONS_HOST": "127.0.0.1",
             "OVERLEAF_MONGO_URL": mongo_uri,
+            "OVERLEAF_REDIS_HOST": redis_hostname,
             "PROJECT_HISTORY_HOST": "127.0.0.1",
             "REALTIME_HOST": "127.0.0.1",
             # Similar to MONGO_ENABLED, this means "a Redis will be provided",
             # not "don't use Redis".
             "REDIS_ENABLED": "false",
-            "REDIS_HOST": self.redis.relation_data.get("hostname"),
             "SERVER_PRO": "false",
             "SPELLING_HOST": "127.0.0.1",
             "WEB_HOST": "127.0.0.1",
@@ -248,14 +157,6 @@ http {
         # "OVERLEAF_LISTEN_IP":"127.0.0.1",
         # "OVERLEAF_PORT":"80",
         # "REDIS_AOF_PERSISTENCE":"true",
-        # "NGINX_ENABLED":"false",
-        # "NGINX_CONFIG_PATH":"config/nginx/nginx.conf",
-        # "NGINX_HTTP_PORT":"80",
-        # "NGINX_HTTP_LISTEN_IP":"127.0.1.1",
-        # "NGINX_TLS_LISTEN_IP":"127.0.1.1",
-        # "TLS_PRIVATE_KEY_PATH":"config/nginx/certs/overleaf_key.pem",
-        # "TLS_CERTIFICATE_PATH":"config/nginx/certs/overleaf_certificate.pem",
-        # "TLS_PORT":"443",
         # "OVERLEAF_APP_NAME":"Our Overleaf Instance",
         # "ENABLED_LINKED_FILE_TYPES":"project_file,project_output_file",
         # "ENABLE_CONVERSIONS":"true",
@@ -301,7 +202,7 @@ http {
             {"LISTEN_ADDRESS": "127.0.0.1", "ENABLED_SERVICES": "web", "WEB_PORT": "4000", "OVERLEAF_SESSION_SECRET": session_secret, "WEB_API_USER": web_api_user, "WEB_API_PASSWORD": web_api_password}
         )
         pebble_layer = {
-            # TODO: 3 services not running: history_v1, nginx, real-time
+            # TODO: 3 services not running: history_v1, real-time
             "summary": "Overleaf service",
             "description": "pebble config layer for Overleaf server",
             "services": {
@@ -361,14 +262,6 @@ http {
                     "environment": history_v1_env,
                     "user": "www-data",
                 },
-                "nginx": {
-                    "override": "replace",
-                    "summary": "nginx",
-                    "command": "/usr/sbin/nginx",
-                    "startup": "enabled",
-                    "environment": {},
-                    "user": "www-data",
-                },
                 "notifications": {
                     "override": "replace",
                     "summary": "notifications",
@@ -404,7 +297,7 @@ http {
                 "web_api": {
                     "override": "replace",
                     "summary": "web api",
-                    "command": "/usr/bin/node /overleaf/services/web/app.mjs >> /var/log/overleaf/web-api.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/web/app.js >> /var/log/overleaf/web-api.log 2>&1",
                     "startup": "enabled",
                     "environment": web_api_env,
                     "user": "www-data",
@@ -412,7 +305,7 @@ http {
                 "web": {
                     "override": "replace",
                     "summary": "web",
-                    "command": "/usr/bin/node /overleaf/services/web/app.mjs >> /var/log/overleaf/web.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/web/app.js >> /var/log/overleaf/web.log 2>&1",
                     "startup": "enabled",
                     "environment": web_env,
                     "user": "www-data",

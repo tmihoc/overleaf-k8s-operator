@@ -7,7 +7,7 @@ container resource: sharelatex/sharelatex:HEAD
 so:
 juju refresh overleaf-k8s --path ./overleaf-k8s_amd64.charm --resource sharelatex=sharelatex/sharelatex:HEAD --force-units
 
-/charm/bin/pebble plan >> takes us to the charm container 
+/charm/bin/pebble plan >> takes us to the charm container
 
 juju ssh --container community overleaf-k8s/0 bash
 
@@ -55,11 +55,11 @@ To format (to make VSCode happy): ruff format src/charm.py
 
 ### Figure out how to provide the image to Juju
 79  charmcraft pack
-127  juju deploy ./overleaf-k8s_amd64.charm --resource community=sharelatex:registry   
+127  juju deploy ./overleaf-k8s_amd64.charm --resource community=sharelatex:registry
 
-* 2024-08-15 Mounted drive appeared empty on the VM. Tried to remove it and remount, but removing it on the VM also removed it from the host. Recloned it on the host and remounted as overleaf-k8s-1, then tried to make the images again. Got an error related to Javascript. Searched on the overleaf GitHub repo for the tail of the path that the error seemed to be related to. Tony noticed the error line had been added just yesterday. [I forget exactly when] Remounted the drive as overleaf-k8s-2. Then in the overleaf clone inside of it, checked out a more recent branch by hash, then tried to build again, and that worked. 
+* 2024-08-15 Mounted drive appeared empty on the VM. Tried to remove it and remount, but removing it on the VM also removed it from the host. Recloned it on the host and remounted as overleaf-k8s-1, then tried to make the images again. Got an error related to Javascript. Searched on the overleaf GitHub repo for the tail of the path that the error seemed to be related to. Tony noticed the error line had been added just yesterday. [I forget exactly when] Remounted the drive as overleaf-k8s-2. Then in the overleaf clone inside of it, checked out a more recent branch by hash, then tried to build again, and that worked.
 
-* 2024-08-22 juju deploy of the local charm failing with a cryptic Charm or bundle not found error.  
+* 2024-08-22 juju deploy of the local charm failing with a cryptic Charm or bundle not found error.
 
 * 2024-08-29 The Charm not found error could be coming from weirdness related to (1) Multipass or (2) strict confinement or (3) to us not using the correct resource syntax or needing to push the image to MicroK8s built-in registry.
 
@@ -98,18 +98,18 @@ PS Just out of curiosity, switched to the old controller and model and tried to 
 Ian says the status looks like the image is not in the microk8s registry. Indeed, it is not:
 
 ubuntu@my-charm-vm:~/overleaf-k8s-2$ microk8s.ctr image list
-REF                                                                                                            TYPE                                                      DIGEST                                                                  SIZE      PLATFORMS                                                                                             LABELS                                                          
-docker.io/calico/cni:v3.25.1                                                                                   application/vnd.docker.distribution.manifest.list.v2+json sha256:9a2c99f0314053aa11e971bd5d72e17951767bf5c6ff1fd9c38c4582d7cb8a0a 85.7 MiB  linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x                                        io.cri-containerd.image=managed                                 
-docker.io/calico/cni@sha256:9a2c99f0314053aa11e971bd5d72e17951767bf5c6ff1fd9c38c4582d7cb8a0a                   application/vnd.docker.distribution.manifest.list.v2+json sha256:9a2c99f0314053aa11e971bd5d72e17951767bf5c6ff1fd9c38c4582d7cb8a0a 85.7 MiB  linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x                                        io.cri-containerd.image=managed                                 
-docker.io/calico/kube-controllers:v3.25.1                                                                      application/vnd.docker.distribution.manifest.list.v2+json sha256:02c1232ee4b8c5a145c401ac1adb34a63ee7fc46b70b6ad0a4e068a774f25f8a 30.4 MiB  linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x                                        io.cri-containerd.image=managed                                 
-docker.io/calico/kube-controllers@sha256:02c1232ee4b8c5a145c401ac1adb34a63ee7fc46b70b6ad0a4e068a774f25f8a      application/vnd.docker.distribution.manifest.list.v2+json sha256:02c1232ee4b8c5a145c401ac1adb34a63ee7fc46b70b6ad0a4e068a774f25f8a 30.4 MiB  linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x                                        io.cri-containerd.image=managed                                 
-docker.io/calico/node:v3.25.1                                                                                  application/vnd.docker.distribution.manifest.list.v2+json sha256:0cd00e83d06b3af8cd712ad2c310be07b240235ad7ca1397e04eb14d20dcc20f 84.2 MiB  linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x                                        io.cri-containerd.image=managed                                 
-docker.io/calico/node@sha256:0cd00e83d06b3af8cd712ad2c310be07b240235ad7ca1397e04eb14d20dcc20f                  application/vnd.docker.distribution.manifest.list.v2+json sha256:0cd00e83d06b3af8cd712ad2c310be07b240235ad7ca1397e04eb14d20dcc20f 84.2 MiB  linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x                                        io.cri-containerd.image=managed                                 
-docker.io/cdkbot/hostpath-provisioner:1.5.0                                                                    application/vnd.docker.distribution.manifest.list.v2+json sha256:ac51e50e32b70e47077fe90928a7fe4d3fc8dd49192db4932c2643c49729c2eb 11.2 MiB  linux/amd64,linux/arm64,linux/ppc64le,linux/s390x                                                     io.cri-containerd.image=managed                                 
-docker.io/cdkbot/hostpath-provisioner@sha256:ac51e50e32b70e47077fe90928a7fe4d3fc8dd49192db4932c2643c49729c2eb  application/vnd.docker.distribution.manifest.list.v2+json sha256:ac51e50e32b70e47077fe90928a7fe4d3fc8dd49192db4932c2643c49729c2eb 11.2 MiB  linux/amd64,linux/arm64,linux/ppc64le,linux/s390x                                                     io.cri-containerd.image=managed                                 
-docker.io/coredns/coredns:1.10.1                                                                               application/vnd.docker.distribution.manifest.list.v2+json sha256:a0ead06651cf580044aeb0a0feba63591858fb2e43ade8c9dea45a6a89ae7e5e 15.4 MiB  linux/amd64,linux/arm/v7,linux/arm64,linux/mips64le,linux/ppc64le,linux/s390x                         io.cri-containerd.image=managed                                 
-docker.io/coredns/coredns@sha256:a0ead06651cf580044aeb0a0feba63591858fb2e43ade8c9dea45a6a89ae7e5e              application/vnd.docker.distribution.manifest.list.v2+json sha256:a0ead06651cf580044aeb0a0feba63591858fb2e43ade8c9dea45a6a89ae7e5e 15.4 MiB  linux/amd64,linux/arm/v7,linux/arm64,linux/mips64le,linux/ppc64le,linux/s390x                         io.cri-containerd.image=managed                                 
-docker.io/jujusolutions/charm-base:ubuntu-22.04                                                                application/vnd.oci.image.index.v1+json                   sha256:586ce71cc7953b0615994716a41528a7a8b70dfa3350efb644bb70d92f5affc6 71.2 MiB  linux/amd64,linux/arm64,linux/ppc64le,linux/s390x,unknown/unknown                                     io.cri-containerd.image=managed                                 
+REF                                                                                                            TYPE                                                      DIGEST                                                                  SIZE      PLATFORMS                                                                                             LABELS
+docker.io/calico/cni:v3.25.1                                                                                   application/vnd.docker.distribution.manifest.list.v2+json sha256:9a2c99f0314053aa11e971bd5d72e17951767bf5c6ff1fd9c38c4582d7cb8a0a 85.7 MiB  linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x                                        io.cri-containerd.image=managed
+docker.io/calico/cni@sha256:9a2c99f0314053aa11e971bd5d72e17951767bf5c6ff1fd9c38c4582d7cb8a0a                   application/vnd.docker.distribution.manifest.list.v2+json sha256:9a2c99f0314053aa11e971bd5d72e17951767bf5c6ff1fd9c38c4582d7cb8a0a 85.7 MiB  linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x                                        io.cri-containerd.image=managed
+docker.io/calico/kube-controllers:v3.25.1                                                                      application/vnd.docker.distribution.manifest.list.v2+json sha256:02c1232ee4b8c5a145c401ac1adb34a63ee7fc46b70b6ad0a4e068a774f25f8a 30.4 MiB  linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x                                        io.cri-containerd.image=managed
+docker.io/calico/kube-controllers@sha256:02c1232ee4b8c5a145c401ac1adb34a63ee7fc46b70b6ad0a4e068a774f25f8a      application/vnd.docker.distribution.manifest.list.v2+json sha256:02c1232ee4b8c5a145c401ac1adb34a63ee7fc46b70b6ad0a4e068a774f25f8a 30.4 MiB  linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x                                        io.cri-containerd.image=managed
+docker.io/calico/node:v3.25.1                                                                                  application/vnd.docker.distribution.manifest.list.v2+json sha256:0cd00e83d06b3af8cd712ad2c310be07b240235ad7ca1397e04eb14d20dcc20f 84.2 MiB  linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x                                        io.cri-containerd.image=managed
+docker.io/calico/node@sha256:0cd00e83d06b3af8cd712ad2c310be07b240235ad7ca1397e04eb14d20dcc20f                  application/vnd.docker.distribution.manifest.list.v2+json sha256:0cd00e83d06b3af8cd712ad2c310be07b240235ad7ca1397e04eb14d20dcc20f 84.2 MiB  linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x                                        io.cri-containerd.image=managed
+docker.io/cdkbot/hostpath-provisioner:1.5.0                                                                    application/vnd.docker.distribution.manifest.list.v2+json sha256:ac51e50e32b70e47077fe90928a7fe4d3fc8dd49192db4932c2643c49729c2eb 11.2 MiB  linux/amd64,linux/arm64,linux/ppc64le,linux/s390x                                                     io.cri-containerd.image=managed
+docker.io/cdkbot/hostpath-provisioner@sha256:ac51e50e32b70e47077fe90928a7fe4d3fc8dd49192db4932c2643c49729c2eb  application/vnd.docker.distribution.manifest.list.v2+json sha256:ac51e50e32b70e47077fe90928a7fe4d3fc8dd49192db4932c2643c49729c2eb 11.2 MiB  linux/amd64,linux/arm64,linux/ppc64le,linux/s390x                                                     io.cri-containerd.image=managed
+docker.io/coredns/coredns:1.10.1                                                                               application/vnd.docker.distribution.manifest.list.v2+json sha256:a0ead06651cf580044aeb0a0feba63591858fb2e43ade8c9dea45a6a89ae7e5e 15.4 MiB  linux/amd64,linux/arm/v7,linux/arm64,linux/mips64le,linux/ppc64le,linux/s390x                         io.cri-containerd.image=managed
+docker.io/coredns/coredns@sha256:a0ead06651cf580044aeb0a0feba63591858fb2e43ade8c9dea45a6a89ae7e5e              application/vnd.docker.distribution.manifest.list.v2+json sha256:a0ead06651cf580044aeb0a0feba63591858fb2e43ade8c9dea45a6a89ae7e5e 15.4 MiB  linux/amd64,linux/arm/v7,linux/arm64,linux/mips64le,linux/ppc64le,linux/s390x                         io.cri-containerd.image=managed
+docker.io/jujusolutions/charm-base:ubuntu-22.04                                                                application/vnd.oci.image.index.v1+json                   sha256:586ce71cc7953b0615994716a41528a7a8b70dfa3350efb644bb70d92f5affc6 71.2 MiB  linux/amd64,linux/arm64,linux/ppc64le,linux/s390x,unknown/unknown                                     io.cri-containerd.image=managed
 docker.io/jujusolutions/charm-base:ubuntu-24.04                                                                application/vnd.oci.image.index.v1+json
 ```
 
@@ -199,7 +199,7 @@ Outputs (error) logs from various services. Ideally these would all be going to 
 Just shows what images are avaialble, e.g.
 
 ```
-ubuntu@overleaf:~/overleaf-k8s/toolkit$ sudo bin/images 
+ubuntu@overleaf:~/overleaf-k8s/toolkit$ sudo bin/images
 ---- Community Edition Images ----
 REPOSITORY              TAG                                             IMAGE ID       CREATED       SIZE
 sharelatex/sharelatex   main                                            918195136e1a   2 weeks ago   2.05GB
@@ -355,7 +355,7 @@ Model          Controller    Cloud/Region        Version  SLA          Timestamp
 welcome-k8s-5  microk8s-new  microk8s/localhost  3.5.3    unsupported  08:27:56+01:00
 
 App           Version  Status  Scale  Charm         Channel   Rev  Address         Exposed  Message
-mongodb-k8s            active      1  mongodb-k8s   6/stable   61  10.152.183.167  no       
+mongodb-k8s            active      1  mongodb-k8s   6/stable   61  10.152.183.167  no
 overleaf-k8s           error       1  overleaf-k8s             12  10.152.183.69   no       hook failed: "database-relation-changed"
 
 Unit             Workload  Agent  Address      Ports  Message
@@ -380,7 +380,7 @@ BTW We can't touch or mv files within the VM (only locally, to be synced to the 
 
 ### Set up Redis
 
-Found the library: https://charmhub.io/redis-k8s/libraries/redis 
+Found the library: https://charmhub.io/redis-k8s/libraries/redis
 
 In charmcraft.yaml, declared charm-libs; defined the requires endpoint; then used charmcraft fetch-libs (had to run this locally, not in the VM).
 
@@ -396,22 +396,28 @@ Model          Controller    Cloud/Region        Version  SLA          Timestamp
 welcome-k8s-5  microk8s-new  microk8s/localhost  3.5.3    unsupported  08:51:41+01:00
 
 App           Version               Status       Scale  Charm         Channel        Rev  Address         Exposed  Message
-mongodb-k8s                         active           1  mongodb-k8s   6/stable        61  10.152.183.167  no       
-overleaf-k8s                        maintenance      1  overleaf-k8s                  14  10.152.183.69   no       
-redis-k8s     ubuntu/redis@691f315  waiting        0/1  redis-k8s     latest/stable    7  10.238.98.84    no       
+mongodb-k8s                         active           1  mongodb-k8s   6/stable        61  10.152.183.167  no
+overleaf-k8s                        maintenance      1  overleaf-k8s                  14  10.152.183.69   no
+redis-k8s     ubuntu/redis@691f315  waiting        0/1  redis-k8s     latest/stable    7  10.238.98.84    no
 
 Unit             Workload     Agent   Address      Ports     Message
 mongodb-k8s/0*   active       idle    10.1.98.86             Primary
-overleaf-k8s/0*  maintenance  idle    10.1.98.110            
-redis-k8s/0*     error        failed  10.1.98.97   6379/TCP  unknown container reason "Unknown": 
+overleaf-k8s/0*  maintenance  idle    10.1.98.110
+redis-k8s/0*     error        failed  10.1.98.97   6379/TCP  unknown container reason "Unknown":
 ubuntu@my-charm-vm:~/overleaf-k8s-4/charm$ juju resolved --no-retry redis-k8s/0
 ERROR unit "redis-k8s/0" is not in an error state
-ubuntu@my-charm-vm:~/overleaf-k8s-4/charm$ 
+ubuntu@my-charm-vm:~/overleaf-k8s-4/charm$
 
 
 
 
 ### Figure out why some things are not running
+
+Done.
+
+### Figure out what port overleaf is served on
+
+
 
 
 ## Jobs to do
