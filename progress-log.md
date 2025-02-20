@@ -23,6 +23,10 @@ To filter debug-lof: juju debug-log --include unit/0
 
 To format (to make VSCode happy): ruff format src/charm.py
 
+mongodb://relation-4:kzBuQGMooT7NhFTdNl5OmZ6tsupVwGpt@mongodb-k8s-0.mongodb-k8s-endpoints:27107/overleaf
+
+mongodb://relation-4:kzBuQGMooT7NhFTdNl5OmZ6tsupVwGpt@mongodb-k8s-0.mongodb-k8s-endpoints:27017/overleaf?replicaSet=mongodb-k8s&authSource=admin
+
 ## The log
 
 
@@ -413,7 +417,7 @@ ubuntu@my-charm-vm:~/overleaf-k8s-4/charm$
 
 ### Figure out why some things are not running
 
-Done.
+Done. All the services are up now!
 
 ### Figure out what port overleaf is served on
 

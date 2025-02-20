@@ -116,7 +116,7 @@ class OverleafK8sCharm(ops.CharmBase):
         # exec /sbin/setuser www-data /usr/bin/node $NODE_PARAMS /overleaf/services/chat/app.js >> /var/log/overleaf/chat.log 2>&1
         # This one has the user, 'www-data', and the actual command. We copy it without $NODE_PARAMS as that's not necessary for now.
         database_settings = self.get_relation_data()
-        mongo_uri = f"mongodb://{database_settings['MONGO_USER']}:{database_settings['MONGO_PASSWORD']}@{database_settings['MONGO_HOST']}:{database_settings['MONGO_PORT']}/{database_settings['MONGO_DB']}"
+        mongo_uri = f"mongodb://{database_settings['MONGO_USER']}:{database_settings['MONGO_PASSWORD']}@{database_settings['MONGO_HOST']}:{database_settings['MONGO_PORT']}/{database_settings['MONGO_DB']}?replicaSet=mongodb-k8s&authSource=admin"
         # TODO: remove this logging, since it contains a password.
         logger.info("Setting Mongo URI to %r from %r", mongo_uri, database_settings)
         if self.redis.relation_data:
@@ -142,6 +142,7 @@ class OverleafK8sCharm(ops.CharmBase):
             "MONGO_ENABLED": "false",
             "NOTIFICATIONS_HOST": "127.0.0.1",
             "OVERLEAF_MONGO_URL": mongo_uri,
+            "OVERLEAF_PORT":"8080",
             "OVERLEAF_REDIS_HOST": redis_hostname,
             "PROJECT_HISTORY_HOST": "127.0.0.1",
             "REALTIME_HOST": "127.0.0.1",
@@ -155,7 +156,6 @@ class OverleafK8sCharm(ops.CharmBase):
         }
         # "OVERLEAF_DATA_PATH":"data/overleaf",
         # "OVERLEAF_LISTEN_IP":"127.0.0.1",
-        # "OVERLEAF_PORT":"80",
         # "REDIS_AOF_PERSISTENCE":"true",
         # "OVERLEAF_APP_NAME":"Our Overleaf Instance",
         # "ENABLED_LINKED_FILE_TYPES":"project_file,project_output_file",
