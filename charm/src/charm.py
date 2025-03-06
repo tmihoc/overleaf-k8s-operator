@@ -91,7 +91,7 @@ class OverleafK8sCharm(ops.CharmBase):
         if len(primary_endpoint) < 2:
             logger.info("Assuming primary endpoint is a plain hostname: %r", primary_endpoint)
             host = primary_endpoint[0]
-            port = 27107
+            port = 27017
         else:
             host = primary_endpoint[0]
             port = primary_endpoint[1]
