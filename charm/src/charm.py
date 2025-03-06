@@ -232,7 +232,7 @@ class OverleafK8sCharm(ops.CharmBase):
                 "chat": {
                     "override": "replace",
                     "summary": "chat",
-                    "command": "/usr/bin/node /overleaf/services/chat/app.js >> /var/log/overleaf/chat.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/chat/app.js",
                     "startup": "enabled",
                     "environment": chat_env,
                     "user": "www-data",
@@ -240,7 +240,7 @@ class OverleafK8sCharm(ops.CharmBase):
                 "clsi": {
                     "override": "replace",
                     "summary": "clsi",
-                    "command": "/usr/bin/node /overleaf/services/clsi/app.js >> /var/log/overleaf/clsi.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/clsi/app.js",
                     "startup": "enabled",
                     "environment": clsi_env,
                     "user": "www-data",
@@ -248,7 +248,7 @@ class OverleafK8sCharm(ops.CharmBase):
                 "contacts": {
                     "override": "replace",
                     "summary": "contacts",
-                    "command": "/usr/bin/node /overleaf/services/contacts/app.js >> /var/log/overleaf/contacts.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/contacts/app.js",
                     "startup": "enabled",
                     "environment": contacts_env,
                     "user": "www-data",
@@ -256,7 +256,7 @@ class OverleafK8sCharm(ops.CharmBase):
                 "docstore": {
                     "override": "replace",
                     "summary": "docstore",
-                    "command": "/usr/bin/node /overleaf/services/docstore/app.js >> /var/log/overleaf/docstore.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/docstore/app.js",
                     "startup": "enabled",
                     "environment": docstore_env,
                     "user": "www-data",
@@ -264,7 +264,7 @@ class OverleafK8sCharm(ops.CharmBase):
                 "document_updater": {
                     "override": "replace",
                     "summary": "document updater",
-                    "command": "/usr/bin/node /overleaf/services/document-updater/app.js >> /var/log/overleaf/document-updater.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/document-updater/app.js",
                     "startup": "enabled",
                     "environment": document_updater_env,
                     "user": "www-data",
@@ -272,7 +272,7 @@ class OverleafK8sCharm(ops.CharmBase):
                 "filestore": {
                     "override": "replace",
                     "summary": "filestore",
-                    "command": "/usr/bin/node /overleaf/services/filestore/app.js >> /var/log/overleaf/filestore.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/filestore/app.js",
                     "startup": "enabled",
                     "environment": filestore_env,
                     "user": "www-data",
@@ -280,7 +280,7 @@ class OverleafK8sCharm(ops.CharmBase):
                 "history_v1": {
                     "override": "replace",
                     "summary": "history v1",
-                    "command": "/usr/bin/node /overleaf/services/history-v1/app.js >> /var/log/overleaf/history-v1.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/history-v1/app.js",
                     "startup": "enabled",
                     "environment": history_v1_env,
                     "user": "www-data",
@@ -288,7 +288,7 @@ class OverleafK8sCharm(ops.CharmBase):
                 "notifications": {
                     "override": "replace",
                     "summary": "notifications",
-                    "command": "/usr/bin/node /overleaf/services/notifications/app.js >> /var/log/overleaf/notifications.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/notifications/app.js",
                     "startup": "enabled",
                     "environment": notifications_env,
                     "user": "www-data",
@@ -296,7 +296,7 @@ class OverleafK8sCharm(ops.CharmBase):
                 "project_history": {
                     "override": "replace",
                     "summary": "project history",
-                    "command": "/usr/bin/node /overleaf/services/project-history/app.js >> /var/log/overleaf/project-history.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/project-history/app.js",
                     "startup": "enabled",
                     "environment": project_history_env,
                     "user": "www-data",
@@ -304,7 +304,7 @@ class OverleafK8sCharm(ops.CharmBase):
                 "real_time": {
                     "override": "replace",
                     "summary": "real time",
-                    "command": "/usr/bin/node /overleaf/services/real-time/app.js >> /var/log/overleaf/real-time.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/real-time/app.js",
                     "startup": "enabled",
                     "environment": real_time_env,
                     "user": "www-data",
@@ -312,7 +312,7 @@ class OverleafK8sCharm(ops.CharmBase):
                 "spelling": {
                     "override": "replace",
                     "summary": "spelling",
-                    "command": "/usr/bin/node /overleaf/services/spelling/app.js >> /var/log/overleaf/spelling.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/spelling/app.js",
                     "startup": "enabled",
                     "environment": spelling_env,
                     "user": "www-data",
@@ -320,7 +320,7 @@ class OverleafK8sCharm(ops.CharmBase):
                 "web_api": {
                     "override": "replace",
                     "summary": "web api",
-                    "command": "/usr/bin/node /overleaf/services/web/app.js >> /var/log/overleaf/web-api.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/web/app.js",
                     "startup": "enabled",
                     "environment": web_api_env,
                     "user": "www-data",
@@ -328,7 +328,7 @@ class OverleafK8sCharm(ops.CharmBase):
                 "web": {
                     "override": "replace",
                     "summary": "web",
-                    "command": "/usr/bin/node /overleaf/services/web/app.js >> /var/log/overleaf/web.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/web/app.js",
                     "startup": "enabled",
                     "environment": web_env,
                     "user": "www-data",
