@@ -412,8 +412,20 @@ ubuntu@my-charm-vm:~/overleaf-k8s-4/charm$ juju resolved --no-retry redis-k8s/0
 ERROR unit "redis-k8s/0" is not in an error state
 ubuntu@my-charm-vm:~/overleaf-k8s-4/charm$
 
+### Figure out connecting to MondoDB
 
+We had what looked like a good connection string but it was not working. To
+figure this out, Tony connected to the mongodb charm container and looked at
+the metadata.yaml file to get the name of the workload container and then
+connected to the mongodb container:
 
+`juju ssh --container mongod mongok8s/0 bash`
+
+And ran `mongosh overleaf`, which shows the full connection string being used.
+Tony compared this one to the one in the Pebble plan and figured out (after
+staring at the strings for far too long) that there was a typo in the port,
+27107 instead of 27017 (pretty sure Tony's mistake a while back, he transposes
+numbers sometimes these days, it's very annoying).
 
 ### Figure out why some things are not running
 
@@ -421,8 +433,15 @@ Done. All the services are up now!
 
 ### Figure out what port overleaf is served on
 
+The [nginx configuration](https://github.com/overleaf/overleaf/blob/2c91363745011fa5128ed2003c366a8add1aa4cb/server-ce/nginx/overleaf.conf#L13) shows that it listens on:
 
+* port 4000 for the main web interface
+* port 3026 for `/socket.io` - I think this is the "realtime" service
+* port 8080 for some "output files" - I think this is downloading static generated files
 
+Also: by default it binds to 127.0.0.0 not 0.0.0.0 so it won't respond outside of the container (we need to set up ingress).
+
+Tony ran `./bin/up` in the toolkit to see what it was doing in Docker and could curl localhost:4000 there.
 
 ## Jobs to do
 

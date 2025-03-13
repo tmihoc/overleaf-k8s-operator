@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class OverleafK8sCharm(ops.CharmBase):
     """Charm the application."""
 
-    on = RedisRelationCharmEvents()
+    on = RedisRelationCharmEvents()  # type: ignore
 
     def __init__(self, framework: ops.Framework):
         super().__init__(framework)
@@ -26,22 +26,33 @@ class OverleafK8sCharm(ops.CharmBase):
         self.database = DatabaseRequires(self, relation_name="database", database_name="overleaf")
         self.framework.observe(self.database.on.database_created, self._configure_change)
         self.redis = RedisRequires(self, "redis")
-        self.framework.observe(self.on.redis_relation_updated, self._configure_change)
+        self.framework.observe(self.on["redis"].relation_updated, self._configure_change)
 
-    def _configure_change(self, event: ops.HookEvent):
+    def _configure_change(self, _: ops.HookEvent):
         """Handle pebble-ready event."""
+        # Check if we have all the information we need. If not, this is where
+        # the holistic approach makes things easy - we don't need to defer, we
+        # just wait for the next event to trigger this same method.
         if not self.model.get_relation("database"):
             logger.info("No relation to the MongoDB database yet.")
-            return  # here's where the holistic approach makes thing easy -- you don't need to defer
+            return
+        mongo_data = self.get_relation_data()
+        if not mongo_data:
+            logger.info("MongoDB is still setting up.")
+            return
         if not self.model.get_relation("redis"):
             logger.info("No relation to the Redis database yet.")
-            return  # here's where the holistic approach makes thing easy -- you don't need to defer
+            return
+        if not self.redis.relation_data:
+            logger.info("Redis is still setting up.")
+            return
         container = self.unit.containers["community"]
         if not container.can_connect():
             logger.info("Pebble not ready yet.")
             return
+
         # Add initial Pebble config layer using the Pebble API
-        container.add_layer("Overleaf service", self._pebble_layer, combine=True)
+        container.add_layer("Overleaf service", self._pebble_layer(mongo_data), combine=True)
 
         # Make Pebble reevaluate its plan, ensuring any services are started if enabled.
         container.replan()
@@ -80,7 +91,7 @@ class OverleafK8sCharm(ops.CharmBase):
         if len(primary_endpoint) < 2:
             logger.info("Assuming primary endpoint is a plain hostname: %r", primary_endpoint)
             host = primary_endpoint[0]
-            port = 27107
+            port = 27017
         else:
             host = primary_endpoint[0]
             port = primary_endpoint[1]
@@ -102,8 +113,7 @@ class OverleafK8sCharm(ops.CharmBase):
 
         return data
 
-    @property
-    def _pebble_layer(self):
+    def _pebble_layer(self, database_settings: dict[str, str]) -> ops.pebble.Layer:
         """Return a dictionary representing a Pebble layer."""
         # The services are in overleaf/server-ce/runit.
         # There's 14 of them.
@@ -115,14 +125,13 @@ class OverleafK8sCharm(ops.CharmBase):
         # This one holds the variables specific for the service.
         # exec /sbin/setuser www-data /usr/bin/node $NODE_PARAMS /overleaf/services/chat/app.js >> /var/log/overleaf/chat.log 2>&1
         # This one has the user, 'www-data', and the actual command. We copy it without $NODE_PARAMS as that's not necessary for now.
-        database_settings = self.get_relation_data()
         mongo_uri = f"mongodb://{database_settings['MONGO_USER']}:{database_settings['MONGO_PASSWORD']}@{database_settings['MONGO_HOST']}:{database_settings['MONGO_PORT']}/{database_settings['MONGO_DB']}?replicaSet=mongodb-k8s&authSource=admin"
         # TODO: remove this logging, since it contains a password.
         logger.info("Setting Mongo URI to %r from %r", mongo_uri, database_settings)
         if self.redis.relation_data:
             redis_hostname = self.redis.relation_data.get("hostname")
         else:
-            redis_hostname = ''
+            redis_hostname = ""
         common_env = {
             "CHAT_HOST": "127.0.0.1",
             "CLSI_HOST": "127.0.0.1",
@@ -142,7 +151,6 @@ class OverleafK8sCharm(ops.CharmBase):
             "MONGO_ENABLED": "false",
             "NOTIFICATIONS_HOST": "127.0.0.1",
             "OVERLEAF_MONGO_URL": mongo_uri,
-            "OVERLEAF_PORT":"8080",
             "OVERLEAF_REDIS_HOST": redis_hostname,
             "PROJECT_HISTORY_HOST": "127.0.0.1",
             "REALTIME_HOST": "127.0.0.1",
@@ -192,24 +200,39 @@ class OverleafK8sCharm(ops.CharmBase):
         project_history_env = common_env.copy()
         project_history_env.update({"LISTEN_ADDRESS": "127.0.0.1"})
         real_time_env = common_env.copy()
-        real_time_env.update({"LISTEN_ADDRESS": "127.0.0.1", "OVERLEAF_SESSION_SECRET": session_secret})
+        real_time_env.update(
+            {"LISTEN_ADDRESS": "127.0.0.1", "OVERLEAF_SESSION_SECRET": session_secret}
+        )
         web_api_env = common_env.copy()
         web_api_env.update(
-            {"LISTEN_ADDRESS": "0.0.0.0", "ENABLED_SERVICES": "api", "METRICS_APP_NAME": "web-api", "OVERLEAF_SESSION_SECRET": session_secret, "WEB_API_USER": web_api_user, "WEB_API_PASSWORD": web_api_password}
+            {
+                "LISTEN_ADDRESS": "0.0.0.0",
+                "ENABLED_SERVICES": "api",
+                "METRICS_APP_NAME": "web-api",
+                "OVERLEAF_SESSION_SECRET": session_secret,
+                "WEB_API_USER": web_api_user,
+                "WEB_API_PASSWORD": web_api_password,
+            }
         )
         web_env = common_env.copy()
         web_env.update(
-            {"LISTEN_ADDRESS": "127.0.0.1", "ENABLED_SERVICES": "web", "WEB_PORT": "4000", "OVERLEAF_SESSION_SECRET": session_secret, "WEB_API_USER": web_api_user, "WEB_API_PASSWORD": web_api_password}
+            {
+                "LISTEN_ADDRESS": "127.0.0.1",
+                "ENABLED_SERVICES": "web",
+                "WEB_PORT": "4000",
+                "OVERLEAF_SESSION_SECRET": session_secret,
+                "WEB_API_USER": web_api_user,
+                "WEB_API_PASSWORD": web_api_password,
+            }
         )
-        pebble_layer = {
-            # TODO: 3 services not running: history_v1, real-time
+        pebble_layer: ops.pebble.LayerDict = {
             "summary": "Overleaf service",
             "description": "pebble config layer for Overleaf server",
             "services": {
                 "chat": {
                     "override": "replace",
                     "summary": "chat",
-                    "command": "/usr/bin/node /overleaf/services/chat/app.js >> /var/log/overleaf/chat.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/chat/app.js",
                     "startup": "enabled",
                     "environment": chat_env,
                     "user": "www-data",
@@ -217,7 +240,7 @@ class OverleafK8sCharm(ops.CharmBase):
                 "clsi": {
                     "override": "replace",
                     "summary": "clsi",
-                    "command": "/usr/bin/node /overleaf/services/clsi/app.js >> /var/log/overleaf/clsi.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/clsi/app.js",
                     "startup": "enabled",
                     "environment": clsi_env,
                     "user": "www-data",
@@ -225,7 +248,7 @@ class OverleafK8sCharm(ops.CharmBase):
                 "contacts": {
                     "override": "replace",
                     "summary": "contacts",
-                    "command": "/usr/bin/node /overleaf/services/contacts/app.js >> /var/log/overleaf/contacts.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/contacts/app.js",
                     "startup": "enabled",
                     "environment": contacts_env,
                     "user": "www-data",
@@ -233,7 +256,7 @@ class OverleafK8sCharm(ops.CharmBase):
                 "docstore": {
                     "override": "replace",
                     "summary": "docstore",
-                    "command": "/usr/bin/node /overleaf/services/docstore/app.js >> /var/log/overleaf/docstore.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/docstore/app.js",
                     "startup": "enabled",
                     "environment": docstore_env,
                     "user": "www-data",
@@ -241,7 +264,7 @@ class OverleafK8sCharm(ops.CharmBase):
                 "document_updater": {
                     "override": "replace",
                     "summary": "document updater",
-                    "command": "/usr/bin/node /overleaf/services/document-updater/app.js >> /var/log/overleaf/document-updater.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/document-updater/app.js",
                     "startup": "enabled",
                     "environment": document_updater_env,
                     "user": "www-data",
@@ -249,7 +272,7 @@ class OverleafK8sCharm(ops.CharmBase):
                 "filestore": {
                     "override": "replace",
                     "summary": "filestore",
-                    "command": "/usr/bin/node /overleaf/services/filestore/app.js >> /var/log/overleaf/filestore.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/filestore/app.js",
                     "startup": "enabled",
                     "environment": filestore_env,
                     "user": "www-data",
@@ -257,7 +280,7 @@ class OverleafK8sCharm(ops.CharmBase):
                 "history_v1": {
                     "override": "replace",
                     "summary": "history v1",
-                    "command": "/usr/bin/node /overleaf/services/history-v1/app.js >> /var/log/overleaf/history-v1.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/history-v1/app.js",
                     "startup": "enabled",
                     "environment": history_v1_env,
                     "user": "www-data",
@@ -265,7 +288,7 @@ class OverleafK8sCharm(ops.CharmBase):
                 "notifications": {
                     "override": "replace",
                     "summary": "notifications",
-                    "command": "/usr/bin/node /overleaf/services/notifications/app.js >> /var/log/overleaf/notifications.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/notifications/app.js",
                     "startup": "enabled",
                     "environment": notifications_env,
                     "user": "www-data",
@@ -273,7 +296,7 @@ class OverleafK8sCharm(ops.CharmBase):
                 "project_history": {
                     "override": "replace",
                     "summary": "project history",
-                    "command": "/usr/bin/node /overleaf/services/project-history/app.js >> /var/log/overleaf/project-history.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/project-history/app.js",
                     "startup": "enabled",
                     "environment": project_history_env,
                     "user": "www-data",
@@ -281,7 +304,7 @@ class OverleafK8sCharm(ops.CharmBase):
                 "real_time": {
                     "override": "replace",
                     "summary": "real time",
-                    "command": "/usr/bin/node /overleaf/services/real-time/app.js >> /var/log/overleaf/real-time.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/real-time/app.js",
                     "startup": "enabled",
                     "environment": real_time_env,
                     "user": "www-data",
@@ -289,7 +312,7 @@ class OverleafK8sCharm(ops.CharmBase):
                 "spelling": {
                     "override": "replace",
                     "summary": "spelling",
-                    "command": "/usr/bin/node /overleaf/services/spelling/app.js >> /var/log/overleaf/spelling.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/spelling/app.js",
                     "startup": "enabled",
                     "environment": spelling_env,
                     "user": "www-data",
@@ -297,7 +320,7 @@ class OverleafK8sCharm(ops.CharmBase):
                 "web_api": {
                     "override": "replace",
                     "summary": "web api",
-                    "command": "/usr/bin/node /overleaf/services/web/app.js >> /var/log/overleaf/web-api.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/web/app.js",
                     "startup": "enabled",
                     "environment": web_api_env,
                     "user": "www-data",
@@ -305,7 +328,7 @@ class OverleafK8sCharm(ops.CharmBase):
                 "web": {
                     "override": "replace",
                     "summary": "web",
-                    "command": "/usr/bin/node /overleaf/services/web/app.js >> /var/log/overleaf/web.log 2>&1",
+                    "command": "/usr/bin/node /overleaf/services/web/app.js",
                     "startup": "enabled",
                     "environment": web_env,
                     "user": "www-data",
