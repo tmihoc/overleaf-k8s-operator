@@ -26,7 +26,22 @@ class OverleafK8sCharm(ops.CharmBase):
         self.database = DatabaseRequires(self, relation_name="database", database_name="overleaf")
         self.framework.observe(self.database.on.database_created, self._configure_change)
         self.redis = RedisRequires(self, "redis")
-        self.framework.observe(self.on["redis"].relation_updated, self._configure_change)
+        framework.observe(self.on["redis"].relation_updated, self._configure_change)
+
+        # TODO: Figure out how to tell Traefik what the proper hostname is.
+        # Tony now thinks this is in the traefik charm config, not in the
+        # overleaf-k8s charm at all. The relation just tells traefik how to
+        # reach the overleaf-k8s units, not how to expose them to the world.
+        self.ingress = IngressPerAppRequirer(self, port=4000, strip_prefix=True)
+        framework.observe(self.ingress.on.ready, self._on_ingress_ready)
+        framework.observe(self.ingress.on.revoked, self._on_ingress_revoked)
+
+    def _on_ingress_ready(self, event: IngressPerAppReadyEvent):
+        self.unit.set_ports(4000)
+        logger.info("This app's ingress URL: %s", event.url)
+
+    def _on_ingress_revoked(self, _):
+        logger.info("This app no longer has ingress")
 
     def _configure_change(self, _: ops.HookEvent):
         """Handle pebble-ready event."""
@@ -173,7 +188,7 @@ class OverleafK8sCharm(ops.CharmBase):
         session_secret = "foo"
 
         # TODO: this should perhaps be config?
-        web_api_user = "overleaf"
+        web_api_user = "overleaf@example.com"
         # TODO: this should be a generated secret
         web_api_password = "overleaf"
 
@@ -206,7 +221,7 @@ class OverleafK8sCharm(ops.CharmBase):
         web_api_env = common_env.copy()
         web_api_env.update(
             {
-                "LISTEN_ADDRESS": "0.0.0.0",
+                "LISTEN_ADDRESS": "127.0.0.1",
                 "ENABLED_SERVICES": "api",
                 "METRICS_APP_NAME": "web-api",
                 "OVERLEAF_SESSION_SECRET": session_secret,
@@ -217,7 +232,7 @@ class OverleafK8sCharm(ops.CharmBase):
         web_env = common_env.copy()
         web_env.update(
             {
-                "LISTEN_ADDRESS": "127.0.0.1",
+                "LISTEN_ADDRESS": "0.0.0.0",
                 "ENABLED_SERVICES": "web",
                 "WEB_PORT": "4000",
                 "OVERLEAF_SESSION_SECRET": session_secret,

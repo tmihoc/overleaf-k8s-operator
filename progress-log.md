@@ -443,6 +443,100 @@ Also: by default it binds to 127.0.0.0 not 0.0.0.0 so it won't respond outside o
 
 Tony ran `./bin/up` in the toolkit to see what it was doing in Docker and could curl localhost:4000 there.
 
+Doing a `curl localhost:4000` in the workload container gives an HTTP response from Overleaf!
+
+### Install ingress
+
+What we did: installed traefik, added the lib instantiation in `__init__`, added the observers (not doing anything at the moment apart logging). `fetch-libs` in `charmcraft.yaml`, fetched them. 
+
+TODO: these docs: https://charmhub.io/traefik-k8s/libraries/ingress are more up to date than these docs: https://charmhub.io/traefik-k8s/docs/integrating -- and why do both exist, when they are telling the same story?
+
+Installing the Traefik charm by itself gave a bunch of errors. Installed a whole bundle of (observability?) charms and then it was working.
+
+TODO: trim this down to only the ones that are needed.
+
+We get a 504 Bad Gateway when trying to `curl` overleaf outside of the workload container.
+
+Added `set_ports` in the charm - the Traefik troubleshooting guide says that the port must be open.
+
+The troubleshooting guide also says that we need to be listening on all ports. Unclear the difference between `0.0.0.0:4000` and `*:4000`. Setting `OVERLEAF_LISTEN_IP` doesn't seem to make any change.
+
+The answer is that it's the `LISTEN_IP` in the Pebble plan that needs to be `0.0.0.0` - the web *API* was set to that, but the API is probably fine just listening in the container. It's the *web* service that needs
+to be externally accessible for traefik.
+
+To test this, we need to:
+
+#### Set up a fake demo.local DNS name
+
+`demo.local` is the default for our traefik install.
+
+```
+ubuntu@overleaf:~/overleaf-k8s-operator/charm$ juju config traefik external_hostname
+demo.local
+```
+
+In the *host*, `sudo nano /etc/hosts` (or whatever editor) and add a line
+
+```
+# For overleaf
+10.1.216.210 demo.local
+```
+
+Where the IP address is the one from Juju status for traefik, like:
+
+```
+Unit             Workload  Agent  Address       Ports     Message
+[...]
+]traefik/0*       active    idle   10.1.216.210            Serving at demo.local
+```
+
+#### Route traffic between the host and the multipass VM
+
+(The COS chapter in the K8s tutorial has instructions for this).
+
+Run `multipass info overleaf`, to get something like:
+
+```
+$ multipass info overleaf
+Name:           overleaf
+State:          Running
+Snapshots:      0
+IPv4:           10.21.40.69
+                172.18.0.1
+                172.17.0.1
+                10.231.81.1
+                10.1.216.192
+Release:        Ubuntu 24.04 LTS
+Image hash:     0e25ca6ee9f0 (Ubuntu 24.04 LTS)
+CPU(s):         4
+Load:           1.11 1.81 2.29
+Disk usage:     54.2GiB out of 77.4GiB
+Memory usage:   3.8GiB out of 7.7GiB
+Mounts:         /home/tameyer/code/overleaf-k8s-operator => /home/ubuntu/overleaf-k8s-operator
+                    UID map: 1000:default
+                    GID map: 1000:default
+```
+
+And then use the IP from `IPv4` there and the traefik IP from Juju status and do:
+
+```
+sudo ip route add 10.1.216.0/24 via 10.21.40.69 
+```
+
+The exact IP/32 would probably have also been fine. That .0/24 will be routing everything in the subnet into the VM, not just traefik.
+
+**This only lasts until you reboot**.
+
+Then open a browser *on the host* and go to `https://demo.local/m-overleaf-k8s/login` and go past the certificate warning.
+
+Some things are busted:
+
+* Looks like no static files (CSS, images, etc). Need to figure out what is meant to serve these - probably it was nginx, so maybe we need a charm for that or a service in our charm? Not sure what the charming story is here.
+* I couldn't log in because the dummy user is "overleaf" but it wants it to be an email, so will try "overleaf@example.com" next time.
+* I think the certificate stuff can be figured out, although it would be simpler with a real domain name (I think we could use the Let's Encrypt charm then and it would all just work).
+
+TODO: By the way, redis-k8s still dies on my every time I shut down multipass. Every time I start it up again I have to force remove it and then add it and integrate it again. This doesn't seem great, should maybe talk to the data people?
+
 ## Jobs to do
 
 ### Set unit/application status
