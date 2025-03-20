@@ -9,6 +9,7 @@ import logging
 import ops
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
 from charms.redis_k8s.v0.redis import RedisRelationCharmEvents, RedisRequires
+from charms.traefik_k8s.v2.ingress import IngressPerAppRequirer, IngressPerAppReadyEvent
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ class OverleafK8sCharm(ops.CharmBase):
 
         # Charm events defined in the database requires charm library.
         self.database = DatabaseRequires(self, relation_name="database", database_name="overleaf")
-        self.framework.observe(self.database.on.database_created, self._configure_change)
+        framework.observe(self.database.on.database_created, self._configure_change)
         self.redis = RedisRequires(self, "redis")
         framework.observe(self.on["redis"].relation_updated, self._configure_change)
 
@@ -165,6 +166,7 @@ class OverleafK8sCharm(ops.CharmBase):
             # instead.
             "MONGO_ENABLED": "false",
             "NOTIFICATIONS_HOST": "127.0.0.1",
+            "OVERLEAF_LISTEN_IP": "0.0.0.0",
             "OVERLEAF_MONGO_URL": mongo_uri,
             "OVERLEAF_REDIS_HOST": redis_hostname,
             "PROJECT_HISTORY_HOST": "127.0.0.1",
@@ -178,7 +180,6 @@ class OverleafK8sCharm(ops.CharmBase):
             "WEB_API_HOST": "127.0.0.1",
         }
         # "OVERLEAF_DATA_PATH":"data/overleaf",
-        # "OVERLEAF_LISTEN_IP":"127.0.0.1",
         # "REDIS_AOF_PERSISTENCE":"true",
         # "OVERLEAF_APP_NAME":"Our Overleaf Instance",
         # "ENABLED_LINKED_FILE_TYPES":"project_file,project_output_file",

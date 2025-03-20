@@ -5,33 +5,36 @@
 workload container name: community
 container resource: sharelatex/sharelatex:HEAD
 so:
+
+```
 juju refresh overleaf-k8s --path ./overleaf-k8s_amd64.charm --resource sharelatex=sharelatex/sharelatex:HEAD --force-units
+```
 
-/charm/bin/pebble plan >> takes us to the charm container
+Take us to the charm container:
 
+```
 juju ssh --container community overleaf-k8s/0 bash
+```
 
+In there, these are useful Pebble commands:
+
+```
 /charm/bin/pebble plan
-
 /charm/bin/pebble services
-
 /charm/bin/pebble logs
+```
 
-To clean up removals: juju resolved --no-retry unit/0
+To clean up removals: `juju resolved --no-retry unit/0`
 
-To filter debug-lof: juju debug-log --include unit/0
+To filter debug-log: `juju debug-log --include unit/0`
 
-To format (to make VSCode happy): ruff format src/charm.py
-
-mongodb://relation-4:kzBuQGMooT7NhFTdNl5OmZ6tsupVwGpt@mongodb-k8s-0.mongodb-k8s-endpoints:27107/overleaf
-
-mongodb://relation-4:kzBuQGMooT7NhFTdNl5OmZ6tsupVwGpt@mongodb-k8s-0.mongodb-k8s-endpoints:27017/overleaf?replicaSet=mongodb-k8s&authSource=admin
+To format (to make VSCode happy): `tox -e format`
 
 ## The log
 
-
 ### Set up the working directory with upstream clones
-1768  mkdir overleaf-k8s
+
+ 1768  mkdir overleaf-k8s
  1769  cd overleaf-k8s/
  1770  multipass mount ~/overleaf-k8s my-charm-vm:~/overleaf-k8s
  1771  git clone git@github.com:overleaf/toolkit.git
@@ -45,6 +48,7 @@ mongodb://relation-4:kzBuQGMooT7NhFTdNl5OmZ6tsupVwGpt@mongodb-k8s-0.mongodb-k8s-
     7  sudo snap install docker
 
 ### Get a different version of upstream and build the image
+
    45  cd overleaf/
    46  git checkout 972fbb7c67e82347909c6aba0165cf517ec82c29
    47  cd server-ce/
@@ -58,6 +62,7 @@ mongodb://relation-4:kzBuQGMooT7NhFTdNl5OmZ6tsupVwGpt@mongodb-k8s-0.mongodb-k8s-
    76  charmcraft init --profile kubernetes
 
 ### Figure out how to provide the image to Juju
+
 79  charmcraft pack
 127  juju deploy ./overleaf-k8s_amd64.charm --resource community=sharelatex:registry
 
@@ -78,8 +83,7 @@ mongodb://relation-4:kzBuQGMooT7NhFTdNl5OmZ6tsupVwGpt@mongodb-k8s-0.mongodb-k8s-
   docker push localhost:32000/sharelatex
   docker push localhost:32000/sharelatex:registry
 
-Tony found out by accident that we'd misspecified the resource in charmcraft.yaml. Once it fixed that, deploy finally ran...
-
+Tony found out by accident that we'd mis-specified the resource in charmcraft.yaml. Once it fixed that, deploy finally ran...
 
 Post-mortem: I should have been more careful about where I put that image and about what I typed into charmcraft.yaml and Juju should have given us a better error message.
 
@@ -116,7 +120,6 @@ docker.io/coredns/coredns@sha256:a0ead06651cf580044aeb0a0feba63591858fb2e43ade8c
 docker.io/jujusolutions/charm-base:ubuntu-22.04                                                                application/vnd.oci.image.index.v1+json                   sha256:586ce71cc7953b0615994716a41528a7a8b70dfa3350efb644bb70d92f5affc6 71.2 MiB  linux/amd64,linux/arm64,linux/ppc64le,linux/s390x,unknown/unknown                                     io.cri-containerd.image=managed
 docker.io/jujusolutions/charm-base:ubuntu-24.04                                                                application/vnd.oci.image.index.v1+json
 ```
-
 
 So what went wrong with `docker push`?
 
@@ -354,6 +357,7 @@ I think a good organisation might be a layer for everything that's in `runit` (t
 
 ### Figure out why some things are not running
 
+```
 ubuntu@my-charm-vm:~/overleaf-k8s-4/charm$ juju status
 Model          Controller    Cloud/Region        Version  SLA          Timestamp
 welcome-k8s-5  microk8s-new  microk8s/localhost  3.5.3    unsupported  08:27:56+01:00
@@ -365,22 +369,22 @@ overleaf-k8s           error       1  overleaf-k8s             12  10.152.183.69
 Unit             Workload  Agent  Address      Ports  Message
 mongodb-k8s/0*   active    idle   10.1.98.78          Primary
 overleaf-k8s/0*  error     idle   10.1.98.119         hook failed: "database-relation-changed"
+```
 
-
-SSH into the community container to get the pebble logs:
-/charm/bin/pebble logs > pebble-logs.txt
+SSH into the community container to get the pebble logs: `/charm/bin/pebble logs > pebble-logs.txt`
 
 Tried to copy the logs from the container to the VM. That only worked when we copied into home:
-juju scp --container community overleaf-k8s/0:/overleaf/pebble-logs.txt ~/my-pebble-logs.txt
+`juju scp --container community overleaf-k8s/0:/overleaf/pebble-logs.txt ~/my-pebble-logs.txt`
 
 Try to do multipass transfer:
+```
 multipass transfer my-charm-vm:/tmp/my-pebble-logs.txt .
 [2025-01-22T09:16:16.269] [error] [sftp] cannot open remote file /tmp/my-pebble-logs.txt: SFTP server: No such file
+```
 
 Figure out why Multipass mount is read only or give up trying to look at the logs this way. (Or why we still need to charmcraft pack locally.)
 
 BTW We can't touch or mv files within the VM (only locally, to be synced to the mounted dir in the VM).
-
 
 ### Set up Redis
 
@@ -390,11 +394,11 @@ In charmcraft.yaml, declared charm-libs; defined the requires endpoint; then use
 
 In src/charm.py, imported the library; created the redis db object (docs missing); set up an observer for the custom event from the library (docs were missing or incomplete); paired it with the config handler, using the holistic approach; added a few lines to that handler to ensure that the redis integration is added before proceeding. We also added the REDIS_ENABLED and REDIS_HOST envvars (the latter: the value was from the redis library).
 
-
 In the library docs, the on = RedisRelationCharmEvents() that overwrites the Ops on is in fact necessary, because the library was developed in a slightly unusual way.
 
 Redis appeared in an error state. Tried to remove it and even resolve errors, but, strangely, we're told "ERROR unit "redis-k8s/0" is not in an error state", even though juju status still shows it in error.
 
+```
 ubuntu@my-charm-vm:~/overleaf-k8s-4/charm$ juju status
 Model          Controller    Cloud/Region        Version  SLA          Timestamp
 welcome-k8s-5  microk8s-new  microk8s/localhost  3.5.3    unsupported  08:51:41+01:00
@@ -411,13 +415,14 @@ redis-k8s/0*     error        failed  10.1.98.97   6379/TCP  unknown container r
 ubuntu@my-charm-vm:~/overleaf-k8s-4/charm$ juju resolved --no-retry redis-k8s/0
 ERROR unit "redis-k8s/0" is not in an error state
 ubuntu@my-charm-vm:~/overleaf-k8s-4/charm$
+```
 
 ### Figure out connecting to MondoDB
 
 We had what looked like a good connection string but it was not working. To
-figure this out, Tony connected to the mongodb charm container and looked at
-the metadata.yaml file to get the name of the workload container and then
-connected to the mongodb container:
+figure this out, Tony connected to the MongoDB charm container and looked at
+the `metadata.yaml` file to get the name of the workload container and then
+connected to the MongoDB container:
 
 `juju ssh --container mongod mongok8s/0 bash`
 
@@ -561,10 +566,6 @@ Presumably can pull from overleaf somehow.
 ### Storage
 
 OVERLEAF_DATA_PATH is for a data volume of some type, probably this needs to be persistent and should be handled with Juju Storage.
-
-### Logs
-
-The service logs are at least partially going to Pebble - but we also try to redirect them to files. Should clean that up.
 
 ### Observability
 
