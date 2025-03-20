@@ -9,6 +9,7 @@ import logging
 import ops
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
 from charms.redis_k8s.v0.redis import RedisRelationCharmEvents, RedisRequires
+from charms.traefik_k8s.v2.ingress import IngressPerAppRequirer, IngressPerAppReadyEvent
 
 logger = logging.getLogger(__name__)
 
@@ -24,9 +25,28 @@ class OverleafK8sCharm(ops.CharmBase):
 
         # Charm events defined in the database requires charm library.
         self.database = DatabaseRequires(self, relation_name="database", database_name="overleaf")
-        self.framework.observe(self.database.on.database_created, self._configure_change)
+        framework.observe(self.database.on.database_created, self._configure_change)
         self.redis = RedisRequires(self, "redis")
-        self.framework.observe(self.on["redis"].relation_updated, self._configure_change)
+        framework.observe(self.on["redis"].relation_updated, self._configure_change)
+
+        # TODO: Figure out how to tell traefik to when someone changes the
+        # hostname in the config.
+        self.ingress = IngressPerAppRequirer(
+            self,
+            # If we don't provide a host, it will use the K8s hostname.
+#            host=self.config["hostname"],
+            port=80,
+            strip_prefix=True,
+        )
+        framework.observe(self.ingress.on.ready, self._on_ingress_ready)
+        framework.observe(self.ingress.on.revoked, self._on_ingress_revoked)
+
+    def _on_ingress_ready(self, event: IngressPerAppReadyEvent):
+        self.unit.set_ports(4000)
+        logger.info("This app's ingress URL: %s", event.url)
+
+    def _on_ingress_revoked(self, _):
+        logger.info("This app no longer has ingress")
 
     def _configure_change(self, _: ops.HookEvent):
         """Handle pebble-ready event."""
