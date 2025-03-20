@@ -170,6 +170,7 @@ class OverleafK8sCharm(ops.CharmBase):
             # instead.
             "MONGO_ENABLED": "false",
             "NOTIFICATIONS_HOST": "127.0.0.1",
+            "OVERLEAF_LISTEN_IP": "0.0.0.0",
             "OVERLEAF_MONGO_URL": mongo_uri,
             "OVERLEAF_REDIS_HOST": redis_hostname,
             "PROJECT_HISTORY_HOST": "127.0.0.1",
@@ -183,7 +184,6 @@ class OverleafK8sCharm(ops.CharmBase):
             "WEB_API_HOST": "127.0.0.1",
         }
         # "OVERLEAF_DATA_PATH":"data/overleaf",
-        # "OVERLEAF_LISTEN_IP":"127.0.0.1",
         # "REDIS_AOF_PERSISTENCE":"true",
         # "OVERLEAF_APP_NAME":"Our Overleaf Instance",
         # "ENABLED_LINKED_FILE_TYPES":"project_file,project_output_file",
