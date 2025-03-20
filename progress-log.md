@@ -534,6 +534,7 @@ Some things are busted:
 * Looks like no static files (CSS, images, etc). Need to figure out what is meant to serve these - probably it was nginx, so maybe we need a charm for that or a service in our charm? Not sure what the charming story is here.
 * I couldn't log in because the dummy user is "overleaf" but it wants it to be an email, so will try "overleaf@example.com" next time.
 * I think the certificate stuff can be figured out, although it would be simpler with a real domain name (I think we could use the Let's Encrypt charm then and it would all just work).
+* The URL has `m-overleaf-k8s` (the `m` is the model name, the rest is the app name). I assume we can configure traefik to send things at the root of the domain to a specific model/app?
 
 TODO: By the way, redis-k8s still dies on my every time I shut down multipass. Every time I start it up again I have to force remove it and then add it and integrate it again. This doesn't seem great, should maybe talk to the data people?
 
