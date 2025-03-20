@@ -53,22 +53,16 @@ parts:
     charm:
         plugin: charm
         source: .
+        build-packages:
+          - cargo
+          - rustc
 
-# (Optional) Configuration options for the charm
-# This config section defines charm config options, and populates the Configure
-# tab on Charmhub.
-# More information on this section at https://juju.is/docs/sdk/charmcraft-yaml#heading--config
-# General configuration documentation: https://juju.is/docs/sdk/config
-# config:
-#   options:
-#     # An example config option to customise the log level of the workload
-#     log-level:
-#       description: |
-#         Configures the log level of gunicorn.
-
-#         Acceptable values are: "info", "debug", "warning", "error" and "critical"
-#       default: "info"
-#       type: string
+config:
+  options:
+    hostname:
+      type: string
+      description: "The hostname for the Overleaf service."
+      default: "overleaf.example.com"
 
 
 # The containers and resources metadata apply to Kubernetes charms only.
@@ -98,6 +92,8 @@ charm-libs:
     version: "0"
   - lib: redis_k8s.redis
     version: "0"
+  - lib: traefik_k8s.ingress
+    version: "2"
 
 requires:
   database:
@@ -106,3 +102,7 @@ requires:
   redis:
     interface: redis
     optional: false    
+  ingress:
+    interface: ingress
+    limit: 1
+    optional: false

@@ -1,0 +1,37 @@
+---
+bundle: kubernetes
+name: traefik-tls-demo
+
+applications:
+  traefik:
+    charm: 'traefik-k8s'
+    scale: 1
+    trust: true
+    channel: 'edge'
+    options:
+      external_hostname: 'demo.local'
+  alertmanager:
+    charm: 'alertmanager-k8s'
+    scale: 1
+    trust: true
+    channel: 'edge'
+  prometheus:
+    charm: 'prometheus-k8s'
+    scale: 1
+    trust: true
+    channel: 'edge'
+  grafana:
+    charm: 'grafana-k8s'
+    scale: 1
+    trust: true
+    channel: 'edge'
+  ca:
+    charm: 'self-signed-certificates'
+    scale: 1
+    channel: 'edge'
+
+relations:
+- [traefik:ingress-per-unit, prometheus:ingress]
+- [traefik:traefik-route, grafana:ingress]
+- [traefik:ingress, alertmanager:ingress]
+- [traefik:certificates, ca:certificates]
